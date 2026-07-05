@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Tilt Marble — Prototype</title>
+<title>Tilt Marble</title>
 <style>
   :root {
     --steel-dark: #14171c;
@@ -14,403 +14,1439 @@
     --text: #e7edf2;
     --text-dim: #7b8794;
     --danger: #d86a5e;
+    --success: #7ed6a5;
+    --warn: #e8c468;
   }
-
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
   html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+    margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
     background: var(--steel-dark);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
     touch-action: none;
   }
-
-  #stage {
-    position: fixed;
-    inset: 0;
-    display: block;
-    background:
-      radial-gradient(circle at 50% 40%, #232830 0%, #14171c 75%);
-  }
-
-  /* --- HUD --- */
-  #hud {
-    position: fixed;
-    top: env(safe-area-inset-top, 0);
-    left: 0;
-    right: 0;
-    padding: 14px 18px 0 18px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    pointer-events: none;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .hud-block {
-    background: rgba(20, 23, 28, 0.55);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px;
-    padding: 8px 12px;
-    backdrop-filter: blur(6px);
-  }
-
-  .hud-label {
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 2px;
-  }
-
-  .hud-value {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--accent);
-  }
-
-  /* --- Overlay / permission screen --- */
-  #overlay {
-    position: fixed;
-    inset: 0;
-    display: flex;
+  .screen {
+    position: fixed; inset: 0;
+    display: none;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    background: radial-gradient(circle at 50% 30%, #1c2028 0%, #101317 80%);
+    padding: env(safe-area-inset-top, 18px) 18px env(safe-area-inset-bottom, 18px) 18px;
+    overflow-y: auto;
+  }
+  .screen.active { display: flex; }
+
+  /* ---------- Shared bits ---------- */
+  h1.title { font-size: 22px; font-weight: 700; margin: 6px 0 2px 0; }
+  p.subtitle { font-size: 13px; color: var(--text-dim); margin: 0 0 18px 0; line-height: 1.5; }
+  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .backBtn {
+    appearance: none; border: none; background: var(--steel-light); color: var(--text);
+    font-size: 14px; padding: 8px 14px; border-radius: 10px; font-weight: 600;
+  }
+  .backBtn:active { transform: scale(0.96); }
+
+  /* ---------- Category menu ---------- */
+  .catGrid { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .catCard {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(180deg, var(--steel-light) 0%, var(--steel) 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px; padding: 14px 16px;
+    text-align: left;
+  }
+  .catCard:active { transform: scale(0.98); }
+  .catIcon {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; background: rgba(94,200,216,0.12);
+  }
+  .catInfo { flex: 1; min-width: 0; }
+  .catName { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .catDesc { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+  .catOrder { font-size: 10px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .catStars { font-size: 11px; color: var(--warn); margin-top: 4px; }
+
+  /* ---------- Level select ---------- */
+  .levelList { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .levelCard {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--steel-light); border-radius: 14px; padding: 14px 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .levelCard:active { transform: scale(0.98); }
+  .levelTier {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+    background: rgba(94,200,216,0.15); color: var(--accent);
+  }
+  .levelInfo { flex: 1; }
+  .levelName { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .levelDiff { font-size: 11px; color: var(--text-dim); }
+  .levelStars { color: var(--warn); font-size: 12px; }
+
+  /* ---------- Game screen ---------- */
+  #gameScreen { padding: 0; }
+  #stage { position: fixed; inset: 0; display: block; }
+  #hud {
+    position: fixed; top: env(safe-area-inset-top, 0); left: 0; right: 0;
+    padding: 12px 14px 0 14px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none; z-index: 4;
+  }
+  .hud-left, .hud-right { display: flex; flex-direction: column; gap: 6px; }
+  .hud-block {
+    background: rgba(20, 23, 28, 0.6); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 6px 11px; backdrop-filter: blur(6px);
+  }
+  .hud-label { font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-dim); }
+  .hud-value { font-size: 14px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .hud-value.warnColor { color: var(--danger); }
+  #exitBtn {
+    pointer-events: auto; appearance: none; border: none;
+    background: rgba(30,34,41,0.7); color: var(--text); font-size: 13px; font-weight: 600;
+    padding: 8px 13px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ---------- Overlays (permission + win/fail) ---------- */
+  #permOverlay, #resultOverlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
     background: radial-gradient(circle at 50% 35%, #1c2028 0%, #101317 80%);
-    padding: 32px;
-    z-index: 10;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.3s ease;
   }
-
-  #overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
+  #permOverlay.hidden, #resultOverlay.hidden { opacity: 0; pointer-events: none; display: none; }
   .marble-preview {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    margin-bottom: 22px;
+    width: 56px; height: 56px; border-radius: 50%; margin-bottom: 18px;
     background: radial-gradient(circle at 32% 28%, #f5f7f9 0%, #b7c1cb 22%, #6b7580 55%, #2a2f38 85%, #16181c 100%);
     box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 0 8px rgba(255,255,255,0.15);
   }
-
-  h1 {
-    font-size: 20px;
-    font-weight: 600;
-    margin: 0 0 8px 0;
-    letter-spacing: 0.01em;
+  #permOverlay h1, #resultOverlay h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px 0; }
+  #permOverlay p, #resultOverlay p { color: var(--text-dim); font-size: 13px; line-height: 1.5; max-width: 300px; margin: 0 0 22px 0; }
+  button.primary {
+    appearance: none; border: none; background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dim) 100%);
+    color: #0a1214; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(94, 200, 216, 0.25); margin: 4px;
   }
-
-  p {
-    color: var(--text-dim);
-    font-size: 14px;
-    line-height: 1.5;
-    max-width: 320px;
-    margin: 0 0 26px 0;
+  button.secondary {
+    appearance: none; border: 1px solid rgba(255,255,255,0.15); background: transparent;
+    color: var(--text); font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 12px; margin: 4px;
   }
-
-  button {
-    appearance: none;
-    border: none;
-    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dim) 100%);
-    color: #0a1214;
-    font-size: 15px;
-    font-weight: 600;
-    padding: 14px 30px;
-    border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(94, 200, 216, 0.25);
-  }
-
   button:active { transform: scale(0.97); }
-
-  #status {
-    margin-top: 18px;
-    font-size: 12px;
-    color: var(--text-dim);
-    max-width: 300px;
-  }
-
-  #status.warn { color: var(--danger); }
-
-  #recenter {
-    position: fixed;
-    bottom: calc(20px + env(safe-area-inset-bottom, 0));
-    right: 18px;
-    z-index: 5;
-    padding: 10px 16px;
-    font-size: 13px;
-    background: rgba(30, 34, 41, 0.7);
-    color: var(--text);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: none;
-  }
+  #permStatus { margin-top: 14px; font-size: 12px; color: var(--danger); max-width: 300px; }
+  #resultIcon { font-size: 40px; margin-bottom: 10px; }
+  .btnRow { display: flex; flex-wrap: wrap; justify-content: center; }
 </style>
 </head>
 <body>
 
-<canvas id="stage"></canvas>
+<!-- ===================== CATEGORY MENU ===================== -->
+<div class="screen active" id="menuScreen">
+  <h1 class="title">Tilt Marble</h1>
+  <p class="subtitle">Pick a challenge type. Each has 3 levels of increasing difficulty.</p>
+  <div class="catGrid" id="catGrid"></div>
+</div>
 
-<div id="hud">
-  <div class="hud-block">
-    <div class="hud-label">Tilt</div>
-    <div class="hud-value" id="tiltReadout">0°, 0°</div>
+<!-- ===================== LEVEL SELECT ===================== -->
+<div class="screen" id="levelSelectScreen">
+  <div class="topbar">
+    <button class="backBtn" id="levelSelectBack">‹ Categories</button>
   </div>
-  <div class="hud-block">
-    <div class="hud-label">Speed</div>
-    <div class="hud-value" id="speedReadout">0.0</div>
+  <h1 class="title" id="levelSelectTitle">Category</h1>
+  <p class="subtitle" id="levelSelectDesc"></p>
+  <div class="levelList" id="levelList"></div>
+</div>
+
+<!-- ===================== GAME ===================== -->
+<div class="screen" id="gameScreen">
+  <canvas id="stage"></canvas>
+  <div id="hud">
+    <div class="hud-left">
+      <div class="hud-block"><div class="hud-label">Level</div><div class="hud-value" id="hudLevelName">-</div></div>
+      <div class="hud-block" id="hudTimerBlock" style="display:none;"><div class="hud-label">Time</div><div class="hud-value" id="hudTimer">--</div></div>
+      <div class="hud-block" id="hudObjectiveBlock" style="display:none;"><div class="hud-label">Objective</div><div class="hud-value" id="hudObjective">-</div></div>
+    </div>
+    <div class="hud-right">
+      <button id="exitBtn">✕ Exit</button>
+    </div>
   </div>
 </div>
 
-<button id="recenter">Recenter</button>
-
-<div id="overlay">
+<!-- ===================== PERMISSION OVERLAY ===================== -->
+<div id="permOverlay">
   <div class="marble-preview"></div>
   <h1>Tilt Marble</h1>
-  <p>Hold your phone flat. Tilt it in any direction to roll the marble — tilt the other way to slow, stop, or reverse it.</p>
-  <button id="startBtn">Start</button>
-  <div id="status"></div>
+  <p>Hold your phone flat. Tilt it to roll the marble — tilt the other way to slow, stop, or reverse it.</p>
+  <button class="primary" id="startBtn">Enable Tilt Controls</button>
+  <div id="permStatus"></div>
+</div>
+
+<!-- ===================== WIN / FAIL OVERLAY ===================== -->
+<div id="resultOverlay" class="hidden">
+  <div id="resultIcon">🏁</div>
+  <h2 id="resultTitle">Level Complete</h2>
+  <p id="resultMessage"></p>
+  <div class="btnRow">
+    <button class="secondary" id="resultRetry">Retry</button>
+    <button class="secondary" id="resultMenu">Level Select</button>
+    <button class="primary" id="resultNext" style="display:none;">Next Level</button>
+  </div>
 </div>
 
 <script>
 (function () {
-  const canvas = document.getElementById('stage');
-  const ctx = canvas.getContext('2d');
-  const overlay = document.getElementById('overlay');
-  const startBtn = document.getElementById('startBtn');
-  const statusEl = document.getElementById('status');
-  const recenterBtn = document.getElementById('recenter');
-  const tiltReadout = document.getElementById('tiltReadout');
-  const speedReadout = document.getElementById('speedReadout');
+"use strict";
 
-  let W, H, DPR;
-  function resize() {
-    DPR = window.devicePixelRatio || 1;
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = W * DPR;
-    canvas.height = H * DPR;
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  }
-  window.addEventListener('resize', resize);
-  resize();
+/* =====================================================================
+   CATEGORY METADATA — default suggested order, player can pick any
+   ===================================================================== */
+const CATEGORIES = [
+  { id: 'edge',     order: 1, icon: '🪨', name: 'Edge & Boundary',      desc: 'Stay on the platform. Falling off is failure.' },
+  { id: 'maze',     order: 2, icon: '🧭', name: 'Maze & Precision',     desc: 'Navigate corridors and gates with careful control.' },
+  { id: 'incline',  order: 3, icon: '⛰️', name: 'Incline & Elevation',  desc: 'Fight a constant pull while climbing toward the goal.' },
+  { id: 'momentum', order: 4, icon: '💥', name: 'Momentum & Collision', desc: 'Build speed deliberately to knock down or push things.' },
+  { id: 'switch',   order: 5, icon: '🔑', name: 'Switch & Puzzle',      desc: 'Trigger switches and plates to open a path forward.' },
+  { id: 'timing',   order: 6, icon: '⏱️', name: 'Timing & Hazards',     desc: 'Race rising floods and timed gates before they close.' },
+  { id: 'hazard',   order: 7, icon: '👾', name: 'Enemy & Dodging',      desc: 'Avoid patrols, turrets, and a marble that hunts you.' },
+];
 
-  // ---- Physics state ----
-  const marble = {
-    x: 0, y: 0,
-    vx: 0, vy: 0,
-    r: 16
-  };
+/* =====================================================================
+   LEVEL DATA
+   Grid legend: # wall | . floor | (space) void/hole | S start | G goal
+   I ice (low friction) | C crumble (decays after touch) | B breakable wall
+   P pin | O pushable target ball | K pocket | W pressure plate
+   1-9 switch | A-I door | > < one-way gate (only passable in that dir)
+   ===================================================================== */
+const COLS = 9, ROWS = 11;
 
-  function resetMarble() {
-    marble.x = W / 2;
-    marble.y = H / 2;
-    marble.vx = 0;
-    marble.vy = 0;
-  }
-  resetMarble();
+const LEVELS = [
+  /* ---------------- EDGE & BOUNDARY ---------------- */
+  { id:'edge1', category:'edge', tier:1, name:'Wide Plateau', stars:1,
+    desc:'One hole in an otherwise generous platform.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#..   ..#",
+      "#..   ..#",
+      "#..   ..#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"] },
 
-  // Tunable physics constants
-  const SENSITIVITY = 620;   // px/s^2 per unit of tilt fraction (at max tilt)
-  const MAX_TILT_DEG = 35;   // tilt angle (deg) that maps to "full" acceleration
-  const FRICTION = 0.86;     // velocity damping per second (rolling friction)
-  const RESTITUTION = 0.55;  // bounce energy retained off walls
-  const DEADZONE_DEG = 1.5;  // ignore tiny tilt noise
+  { id:'edge2', category:'edge', tier:2, name:'The Isthmus', stars:2,
+    desc:'A narrow bridge with drop-offs on both sides.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#  ...  #",
+      "#  ...  #",
+      "#  ...  #",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"] },
 
-  // Calibration offsets (recenter support)
-  let betaOffset = 0, gammaOffset = 0;
-  let rawBeta = 0, rawGamma = 0;
+  { id:'edge3', category:'edge', tier:3, name:'Crumbling Causeway', stars:3,
+    desc:'The path decays behind you. No going back.',
+    grid:[
+      "#########",
+      "#S      #",
+      "#C      #",
+      "#CCCC   #",
+      "#   C   #",
+      "#   C   #",
+      "#   CCCC#",
+      "#      G#",
+      "#       #",
+      "#       #",
+      "#########"] },
 
-  let running = false;
-  let lastTime = null;
+  /* ---------------- MAZE & PRECISION ---------------- */
+  { id:'maze1', category:'maze', tier:1, name:'First Turns', stars:1,
+    desc:'Wide corridors, a couple of gentle turns.',
+    grid:[
+      "#########",
+      "#S..#...#",
+      "#..##...#",
+      "#.......#",
+      "#...##..#",
+      "#.......#",
+      "#..##...#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"] },
 
-  function handleOrientation(e) {
-    if (e.beta === null || e.gamma === null) return;
-    rawBeta = e.beta;
-    rawGamma = e.gamma;
-  }
+  { id:'maze2', category:'maze', tier:2, name:'Groove Run', stars:2,
+    desc:'Single-width corridors. One path dead-ends.',
+    grid:[
+      "#########",
+      "#S#######",
+      "#.##....#",
+      "#..#.##.#",
+      "#....##.#",
+      "#####...#",
+      "#####.###",
+      "#####...#",
+      "#######.#",
+      "#######G#",
+      "#########"] },
 
-  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  { id:'maze3', category:'maze', tier:3, name:'One-Way Gauntlet', stars:3,
+    desc:'Directional gates: cross the wrong way and you bounce back.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#..>....#",
+      "#.......#",
+      "#.......#",
+      "#....<..#",
+      "#.......#",
+      "#......G#",
+      "#########"] },
 
-  function currentTilt() {
-    // beta: front-back tilt (-180..180), gamma: left-right tilt (-90..90)
-    let beta = rawBeta - betaOffset;
-    let gamma = rawGamma - gammaOffset;
-    // Wrap beta into -180..180 in case of offset wraparound
-    if (beta > 180) beta -= 360;
-    if (beta < -180) beta += 360;
-    return { beta, gamma };
-  }
+  /* ---------------- INCLINE & ELEVATION ---------------- */
+  { id:'incline1', category:'incline', tier:1, name:'Gentle Slope', stars:1,
+    desc:'A steady pull rolls you back — keep tilting to climb.',
+    grid:[
+      "#########",
+      "#......G#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#S......#",
+      "#########"],
+    forceZones:[{ x1:1,y1:1,x2:7,y2:9, dir:{x:0,y:1}, strength:210 }] },
 
-  function step(dt) {
-    const { beta, gamma } = currentTilt();
+  { id:'incline2', category:'incline', tier:2, name:'Switchback', stars:2,
+    desc:'The pull alternates side to side. Correct, then correct again.',
+    grid:[
+      "#########",
+      "#....G..#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#S......#",
+      "#########"],
+    forceZones:[
+      { x1:1,y1:1,x2:4,y2:5, dir:{x:1,y:1}, strength:190 },
+      { x1:5,y1:1,x2:7,y2:5, dir:{x:-1,y:1}, strength:190 },
+      { x1:1,y1:6,x2:7,y2:9, dir:{x:0,y:1}, strength:190 }
+    ] },
 
-    // Apply deadzone
-    let b = Math.abs(beta) < DEADZONE_DEG ? 0 : beta;
-    let g = Math.abs(gamma) < DEADZONE_DEG ? 0 : gamma;
+  { id:'incline3', category:'incline', tier:3, name:'The Bowl', stars:3,
+    desc:'Gravity pulls toward the center. The goal sits on the rim.',
+    grid:[
+      "#########",
+      "#...G...#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#...S...#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#########"],
+    forceZones:[{ radial:true, cx:4, cy:5, strength:230 }] },
 
-    // Normalize to -1..1 based on MAX_TILT_DEG, then scale to acceleration
-    const gx = clamp(g / MAX_TILT_DEG, -1, 1);
-    const gy = clamp(b / MAX_TILT_DEG, -1, 1);
+  /* ---------------- MOMENTUM & COLLISION ---------------- */
+  { id:'momentum1', category:'momentum', tier:1, name:'First Pins', stars:1,
+    desc:'Knock down every pin with a solid hit before the goal unlocks.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#..P.P..#",
+      "#.......#",
+      "#...P...#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"],
+    requireAllPinsDown:true },
 
-    const ax = gx * SENSITIVITY;
-    const ay = gy * SENSITIVITY;
+  { id:'momentum2', category:'momentum', tier:2, name:'Glass Wall', stars:2,
+    desc:'Smash through the breakable wall, or take the long way around.',
+    grid:[
+      "#########",
+      "#S..#...#",
+      "#...#...#",
+      "#...B...#",
+      "#...#...#",
+      "#...#...#",
+      "#...#...#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"] },
 
-    marble.vx += ax * dt;
-    marble.vy += ay * dt;
+  { id:'momentum3', category:'momentum', tier:3, name:'Billiard Puzzle', stars:3,
+    desc:'Push the heavy ball into the pocket. Your own position doesn\'t matter.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#...O...#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......K#",
+      "#########"],
+    winType:'pocket' },
 
-    // Rolling friction (exponential damping, frame-rate independent)
-    const damp = Math.pow(FRICTION, dt);
-    marble.vx *= damp;
-    marble.vy *= damp;
+  /* ---------------- SWITCH & PUZZLE ---------------- */
+  { id:'switch1', category:'switch', tier:1, name:'Single Key', stars:1,
+    desc:'Trigger the switch to open the door ahead.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#...1...#",
+      "#.......#",
+      "#.......#",
+      "#...#...#",
+      "#...A...#",
+      "#...#...#",
+      "#......G#",
+      "#########"],
+    switches:[{ id:1, col:4, row:3, doors:['A'] }],
+    doors:[{ id:'A', col:4, row:7 }] },
 
-    marble.x += marble.vx * dt;
-    marble.y += marble.vy * dt;
+  { id:'switch2', category:'switch', tier:2, name:'In Order', stars:2,
+    desc:'Hit the switches 1, 2, 3 in order. Out of order resets them all.',
+    grid:[
+      "#########",
+      "#S.1....#",
+      "#.......#",
+      "#.......#",
+      "#......2#",
+      "#.......#",
+      "#.......#",
+      "#3......#",
+      "#######A#",
+      "#......G#",
+      "#########"],
+    switches:[
+      { id:1, col:3, row:1, doors:['A'] },
+      { id:2, col:7, row:4, doors:['A'] },
+      { id:3, col:1, row:7, doors:['A'] }
+    ],
+    doors:[{ id:'A', col:7, row:8 }],
+    sequenceMode:true },
 
-    // Wall collisions
-    const r = marble.r;
-    if (marble.x < r) { marble.x = r; marble.vx = -marble.vx * RESTITUTION; }
-    if (marble.x > W - r) { marble.x = W - r; marble.vx = -marble.vx * RESTITUTION; }
-    if (marble.y < r) { marble.y = r; marble.vy = -marble.vy * RESTITUTION; }
-    if (marble.y > H - r) { marble.y = H - r; marble.vy = -marble.vy * RESTITUTION; }
+  { id:'switch3', category:'switch', tier:3, name:'Weight and Wait', stars:3,
+    desc:'Push the block onto the plate to hold the door open, then get through yourself.',
+    grid:[
+      "#########",
+      "#S...H..#",
+      "#.......#",
+      "#.......#",
+      "#..W....#",
+      "#.......#",
+      "#######A#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"],
+    doors:[{ id:'A', col:7, row:6 }],
+    plate:{ col:3, row:4, doors:['A'] },
+    heavyBlocks:[{ col:5, row:1 }] },
 
-    // HUD
-    tiltReadout.textContent = `${b.toFixed(0)}°, ${g.toFixed(0)}°`;
-    const speed = Math.hypot(marble.vx, marble.vy);
-    speedReadout.textContent = (speed / 100).toFixed(1);
-  }
+  /* ---------------- TIMING & ENVIRONMENTAL ---------------- */
+  { id:'timing1', category:'timing', tier:1, name:'Rising Tide', stars:1,
+    desc:'The water rises from below. Keep moving toward higher ground.',
+    grid:[
+      "#########",
+      "#.....G.#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#S......#",
+      "#########"],
+    flood:{ theme:'water', interval:3.0, rows:[9,8,7,6] } },
 
-  // ---- Rendering ----
-  const GRID_SIZE = 48;
+  { id:'timing2', category:'timing', tier:2, name:'Drawbridges', stars:2,
+    desc:'Two gates open on offset timers. Watch the cycle before you commit.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#T#####T#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"],
+    timedDoors:[
+      { col:1, row:4, period:4, openDuration:1.6, phase:0 },
+      { col:7, row:4, period:4, openDuration:1.6, phase:2 }
+    ] },
 
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
+  { id:'timing3', category:'timing', tier:3, name:'Ice and Fire', stars:3,
+    desc:'Lava rises fast, and the floor near the goal barely has any grip.',
+    grid:[
+      "#########",
+      "#IIIIIIG#",
+      "#IIIIIII#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#S......#",
+      "#########"],
+    flood:{ theme:'lava', interval:2.2, rows:[9,8,7,6,5] } },
 
-    // Flat surface: subtle grid to visualize tilt/motion
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-    ctx.lineWidth = 1;
-    const offsetX = (marble.x * 0.15) % GRID_SIZE;
-    const offsetY = (marble.y * 0.15) % GRID_SIZE;
-    for (let x = -GRID_SIZE; x < W + GRID_SIZE; x += GRID_SIZE) {
-      ctx.beginPath();
-      ctx.moveTo(x - offsetX, 0);
-      ctx.lineTo(x - offsetX, H);
-      ctx.stroke();
+  /* ---------------- ENEMY & HAZARD DODGING ---------------- */
+  { id:'hazard1', category:'hazard', tier:1, name:'Sweepers', stars:1,
+    desc:'Two hazards sweep back and forth on fixed lines.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"],
+    hazards:[
+      { type:'patrol', axis:'x', row:3.5, from:1, to:7, speed:2.1, size:0.42 },
+      { type:'patrol', axis:'x', row:6.5, from:7, to:1, speed:2.6, size:0.42 }
+    ] },
+
+  { id:'hazard2', category:'hazard', tier2:2, tier:2, name:'Crossfire', stars:2,
+    desc:'Horizontal and vertical patrols overlap, plus a turret.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"],
+    hazards:[
+      { type:'patrol', axis:'x', row:3, from:1, to:7, speed:2.4, size:0.4 },
+      { type:'patrol', axis:'y', col:4.5, from:1, to:9, speed:2.0, size:0.4 },
+      { type:'turret', col:1, row:1, dir:{x:1,y:0}, interval:2.2, projSpeed:3.4, size:0.3 }
+    ] },
+
+  { id:'hazard3', category:'hazard', tier:3, name:'The Hunter', stars:3,
+    desc:'Something with your exact same physics is now hunting you.',
+    grid:[
+      "#########",
+      "#S......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#.......#",
+      "#......G#",
+      "#########"],
+    hazards:[
+      { type:'hunter', col:7, row:9, speed:145, size:0.42 },
+      { type:'patrol', axis:'x', row:5, from:2, to:6, speed:1.6, size:0.35 }
+    ] },
+];
+
+/* =====================================================================
+   PHYSICS CONSTANTS
+   ===================================================================== */
+const SENSITIVITY = 620;
+const MAX_TILT_DEG = 35;
+const FRICTION = 0.86;
+const RESTITUTION = 0.5;
+const DEADZONE_DEG = 1.5;
+const TOPPLE_SPEED = 90;      // px/s needed to knock down a pin
+const BREAK_SPEED = 110;      // px/s needed to damage a breakable wall
+const BLOCK_PUSH_SPEED = 40;  // px/s needed to move a heavy block
+
+/* =====================================================================
+   DOM refs
+   ===================================================================== */
+const screens = {
+  menu: document.getElementById('menuScreen'),
+  levelSelect: document.getElementById('levelSelectScreen'),
+  game: document.getElementById('gameScreen'),
+};
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+const catGrid = document.getElementById('catGrid');
+const levelList = document.getElementById('levelList');
+const levelSelectTitle = document.getElementById('levelSelectTitle');
+const levelSelectDesc = document.getElementById('levelSelectDesc');
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const hudLevelName = document.getElementById('hudLevelName');
+const hudTimerBlock = document.getElementById('hudTimerBlock');
+const hudTimer = document.getElementById('hudTimer');
+const hudObjectiveBlock = document.getElementById('hudObjectiveBlock');
+const hudObjective = document.getElementById('hudObjective');
+
+const permOverlay = document.getElementById('permOverlay');
+const startBtn = document.getElementById('startBtn');
+const permStatus = document.getElementById('permStatus');
+
+const resultOverlay = document.getElementById('resultOverlay');
+const resultIcon = document.getElementById('resultIcon');
+const resultTitle = document.getElementById('resultTitle');
+const resultMessage = document.getElementById('resultMessage');
+const resultRetry = document.getElementById('resultRetry');
+const resultMenu = document.getElementById('resultMenu');
+const resultNext = document.getElementById('resultNext');
+
+/* =====================================================================
+   BUILD MENU UI
+   ===================================================================== */
+const orderedCats = CATEGORIES.slice().sort((a,b) => a.order - b.order);
+
+orderedCats.forEach(cat => {
+  const card = document.createElement('button');
+  card.className = 'catCard';
+  const levels = LEVELS.filter(l => l.category === cat.id);
+  card.innerHTML = `
+    <div class="catIcon">${cat.icon}</div>
+    <div class="catInfo">
+      <div class="catOrder">SUGGESTED ${cat.order} OF ${orderedCats.length}</div>
+      <div class="catName">${cat.name}</div>
+      <div class="catDesc">${cat.desc}</div>
+      <div class="catStars">${levels.length} levels</div>
+    </div>`;
+  card.addEventListener('click', () => openLevelSelect(cat));
+  catGrid.appendChild(card);
+});
+
+function openLevelSelect(cat) {
+  levelSelectTitle.textContent = cat.name;
+  levelSelectDesc.textContent = cat.desc;
+  levelList.innerHTML = '';
+  const levels = LEVELS.filter(l => l.category === cat.id).sort((a,b)=>a.tier-b.tier);
+  levels.forEach(lvl => {
+    const card = document.createElement('button');
+    card.className = 'levelCard';
+    card.innerHTML = `
+      <div class="levelTier">${lvl.tier}</div>
+      <div class="levelInfo">
+        <div class="levelName">${lvl.name}</div>
+        <div class="levelDiff">${lvl.desc}</div>
+      </div>
+      <div class="levelStars">${'★'.repeat(lvl.stars)}${'☆'.repeat(3-lvl.stars)}</div>`;
+    card.addEventListener('click', () => startLevel(lvl.id));
+    levelList.appendChild(card);
+  });
+  showScreen('levelSelect');
+}
+
+document.getElementById('levelSelectBack').addEventListener('click', () => showScreen('menu'));
+
+/* =====================================================================
+   CANVAS SIZING
+   ===================================================================== */
+let W, H, DPR, cellSize, offsetX, offsetY;
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  cellSize = Math.min(W / COLS, H / ROWS);
+  offsetX = (W - cellSize * COLS) / 2;
+  offsetY = (H - cellSize * ROWS) / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function toPx(col, row) { return { x: offsetX + col * cellSize, y: offsetY + row * cellSize }; }
+function cellOf(x, y) { return { col: Math.floor((x - offsetX) / cellSize), row: Math.floor((y - offsetY) / cellSize) }; }
+
+/* =====================================================================
+   TILT INPUT
+   ===================================================================== */
+let rawBeta = 0, rawGamma = 0, betaOffset = 0, gammaOffset = 0, eventsReceived = 0;
+function handleOrientation(e) {
+  if (e.beta === null || e.gamma === null) return;
+  eventsReceived++;
+  rawBeta = e.beta;
+  rawGamma = e.gamma;
+}
+function currentTilt() {
+  let beta = rawBeta - betaOffset;
+  let gamma = rawGamma - gammaOffset;
+  if (beta > 180) beta -= 360;
+  if (beta < -180) beta += 360;
+  return { beta, gamma };
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+/* =====================================================================
+   GAME STATE
+   ===================================================================== */
+let level = null;
+let tiles = [];           // 2D array of chars, mutable copy of grid
+let marble = { x:0, y:0, vx:0, vy:0, r:0 };
+let pins = [];
+let breakableHp = {};      // key "col,row" -> hp
+let doorOpenState = {};    // door id -> bool
+let switchActive = {};     // switch id -> bool
+let sequenceProgress = 0;
+let plateWeighted = false;
+let heavyBlocks = [];
+let targetBall = null;
+let hazards = [];
+let projectiles = [];
+let crumbleTimers = {};    // key -> touchedAt time
+let floodElapsed = 0;
+let floodIndex = 0;
+let timedDoorsState = [];
+let elapsedTime = 0;
+let running = false;
+let gameOver = false;
+let lastTime = null;
+let fallAnim = null;       // {progress} when marble is falling into void
+
+function keyOf(col, row) { return col + ',' + row; }
+
+function loadLevel(lvl) {
+  level = lvl;
+  tiles = lvl.grid.map(row => row.split(''));
+  gameOver = false;
+  fallAnim = null;
+  elapsedTime = 0;
+  floodElapsed = 0;
+  floodIndex = 0;
+  sequenceProgress = 0;
+  switchActive = {};
+  doorOpenState = {};
+  breakableHp = {};
+  crumbleTimers = {};
+  plateWeighted = false;
+  pins = [];
+  heavyBlocks = [];
+  targetBall = null;
+  hazards = [];
+  projectiles = [];
+
+  let startCol = 1, startRow = 1;
+
+  for (let r = 0; r < tiles.length; r++) {
+    for (let c = 0; c < tiles[r].length; c++) {
+      const ch = tiles[r][c];
+      if (ch === 'S') { startCol = c; startRow = r; tiles[r][c] = '.'; }
+      else if (ch === 'P') { pins.push({ col:c, row:r, state:'up' }); tiles[r][c] = '.'; }
+      else if (ch === 'B') { breakableHp[keyOf(c,r)] = 2; }
+      else if (ch === 'O') { targetBall = { col:c, row:r }; tiles[r][c] = '.'; }
+      else if (ch === 'H') { heavyBlocks.push({ col:c, row:r }); tiles[r][c] = '.'; }
+      else if (ch === 'T') { /* timed door placeholder handled via level.timedDoors */ }
     }
-    for (let y = -GRID_SIZE; y < H + GRID_SIZE; y += GRID_SIZE) {
-      ctx.beginPath();
-      ctx.moveTo(0, y - offsetY);
-      ctx.lineTo(W, y - offsetY);
-      ctx.stroke();
+  }
+
+  (lvl.doors || []).forEach(d => { doorOpenState[d.id] = false; });
+  (lvl.switches || []).forEach(s => { switchActive[s.id] = false; });
+  (lvl.timedDoors || []).forEach(() => {});
+  timedDoorsState = (lvl.timedDoors || []).map(() => ({ open:false }));
+
+  (lvl.hazards || []).forEach(hz => {
+    hazards.push(Object.assign({}, hz, {
+      x: (hz.col !== undefined ? hz.col : hz.from) * 1,
+      y: (hz.row !== undefined ? hz.row : hz.from) * 1,
+      dirSign: 1,
+      cooldown: 0
+    }));
+  });
+
+  const startPx = toPx(startCol + 0.5, startRow + 0.5);
+  marble.x = startPx.x; marble.y = startPx.y;
+  marble.vx = 0; marble.vy = 0;
+  marble.r = cellSize * 0.30;
+
+  betaOffset = rawBeta; gammaOffset = rawGamma; // auto-recenter on level load
+
+  updateHud();
+}
+
+function tileAt(col, row) {
+  if (row < 0 || row >= tiles.length || col < 0 || col >= tiles[row].length) return '#';
+  return tiles[row][col];
+}
+function setTile(col, row, ch) { if (tiles[row]) tiles[row][col] = ch; }
+
+function isDoorChar(ch) { return level.doors && level.doors.some(d => d.id === ch); }
+function doorAt(col, row) {
+  if (!level.doors) return null;
+  return level.doors.find(d => d.col === col && d.row === row) || null;
+}
+function isSolidTile(ch, col, row) {
+  if (ch === '#') return true;
+  if (ch === 'B') return (breakableHp[keyOf(col,row)] || 0) > 0;
+  const door = doorAt(col, row);
+  if (door) return !doorOpenState[door.id];
+  return false;
+}
+
+/* =====================================================================
+   PHYSICS STEP
+   ===================================================================== */
+function step(dt) {
+  elapsedTime += dt;
+
+  // --- Tilt-based acceleration ---
+  const { beta, gamma } = currentTilt();
+  let b = Math.abs(beta) < DEADZONE_DEG ? 0 : beta;
+  let g = Math.abs(gamma) < DEADZONE_DEG ? 0 : gamma;
+  const gx = clamp(g / MAX_TILT_DEG, -1, 1);
+  const gy = clamp(b / MAX_TILT_DEG, -1, 1);
+  let ax = gx * SENSITIVITY;
+  let ay = gy * SENSITIVITY;
+
+  // --- Force zones (inclines) ---
+  const mCell = { col: (marble.x - offsetX) / cellSize, row: (marble.y - offsetY) / cellSize };
+  (level.forceZones || []).forEach(z => {
+    if (z.radial) {
+      const dx = z.cx - mCell.col, dy = z.cy - mCell.row;
+      const dist = Math.hypot(dx, dy) || 0.001;
+      ax += (dx / dist) * z.strength;
+      ay += (dy / dist) * z.strength;
+    } else if (mCell.col >= z.x1 && mCell.col <= z.x2 && mCell.row >= z.y1 && mCell.row <= z.y2) {
+      const len = Math.hypot(z.dir.x, z.dir.y) || 1;
+      ax += (z.dir.x / len) * z.strength;
+      ay += (z.dir.y / len) * z.strength;
     }
-    ctx.restore();
+  });
 
-    // Marble shadow (offset opposite to velocity slightly, grows with height illusion)
-    ctx.save();
+  marble.vx += ax * dt;
+  marble.vy += ay * dt;
+
+  // --- Friction (tile-dependent) ---
+  const curTile = tileAt(Math.floor(mCell.col), Math.floor(mCell.row));
+  let frictionBase = FRICTION;
+  if (curTile === 'I') frictionBase = 0.985;   // ice: barely any friction
+  const damp = Math.pow(frictionBase, dt);
+  marble.vx *= damp;
+  marble.vy *= damp;
+
+  marble.x += marble.vx * dt;
+  marble.y += marble.vy * dt;
+
+  // --- Collisions with grid ---
+  resolveGridCollisions(marble, dt);
+
+  // --- Crumble tiles ---
+  const curCol = Math.floor(mCell.col), curRow = Math.floor(mCell.row);
+  if (tileAt(curCol, curRow) === 'C') {
+    const key = keyOf(curCol, curRow);
+    if (!crumbleTimers[key]) crumbleTimers[key] = elapsedTime;
+    if (elapsedTime - crumbleTimers[key] > 0.4) setTile(curCol, curRow, ' ');
+  }
+
+  // --- Pins ---
+  pins.forEach(p => {
+    if (p.state === 'down') return;
+    const px = toPx(p.col + 0.5, p.row + 0.5);
+    const dx = marble.x - px.x, dy = marble.y - px.y;
+    const dist = Math.hypot(dx, dy);
+    const pr = cellSize * 0.28;
+    if (dist < marble.r + pr) {
+      const speed = Math.hypot(marble.vx, marble.vy);
+      if (speed > TOPPLE_SPEED) {
+        p.state = 'down';
+      } else {
+        const nx = dx / (dist || 1), ny = dy / (dist || 1);
+        const overlap = (marble.r + pr) - dist;
+        marble.x += nx * overlap; marble.y += ny * overlap;
+        const vn = marble.vx * nx + marble.vy * ny;
+        marble.vx -= 2 * vn * nx * RESTITUTION;
+        marble.vy -= 2 * vn * ny * RESTITUTION;
+      }
+    }
+  });
+
+  // --- Breakable walls (damage on hit) ---
+  Object.keys(breakableHp).forEach(key => {
+    if (breakableHp[key] <= 0) return;
+    const [c, r] = key.split(',').map(Number);
+    const cellPx = toPx(c, r);
+    const cx = cellPx.x + cellSize/2, cy = cellPx.y + cellSize/2;
+    const dx = marble.x - cx, dy = marble.y - cy;
+    if (Math.abs(dx) < cellSize/2 + marble.r && Math.abs(dy) < cellSize/2 + marble.r) {
+      const speed = Math.hypot(marble.vx, marble.vy);
+      if (speed > BREAK_SPEED && !breakableHp['_cool_' + key]) {
+        breakableHp[key] -= 1;
+        breakableHp['_cool_' + key] = 1;
+        if (breakableHp[key] <= 0) setTile(c, r, '.');
+      }
+    } else {
+      breakableHp['_cool_' + key] = 0;
+    }
+  });
+
+  // --- Heavy blocks / target ball ---
+  const allBlocks = heavyBlocks.concat(targetBall ? [targetBall] : []);
+  allBlocks.forEach(blk => {
+    const bp = toPx(blk.col + 0.5, blk.row + 0.5);
+    if (blk._px === undefined) { blk._px = bp.x; blk._py = bp.y; blk._vx = 0; blk._vy = 0; }
+    const dx = blk._px - marble.x, dy = blk._py - marble.y;
+    const dist = Math.hypot(dx, dy);
+    const br = cellSize * 0.3;
+    if (dist < marble.r + br) {
+      const speed = Math.hypot(marble.vx, marble.vy);
+      const nx = dx / (dist || 1), ny = dy / (dist || 1);
+      const overlap = (marble.r + br) - dist;
+      blk._px += nx * overlap * 0.6; blk._py += ny * overlap * 0.6;
+      marble.x -= nx * overlap * 0.4; marble.y -= ny * overlap * 0.4;
+      if (speed > BLOCK_PUSH_SPEED) {
+        blk._vx += nx * speed * 0.5;
+        blk._vy += ny * speed * 0.5;
+        marble.vx *= 0.5; marble.vy *= 0.5;
+      }
+    }
+    blk._vx *= Math.pow(0.9, dt * 60);
+    blk._vy *= Math.pow(0.9, dt * 60);
+    blk._px += blk._vx * dt;
+    blk._py += blk._vy * dt;
+    resolveGridCollisionsGeneric(blk, cellSize * 0.3, dt, true);
+    blk.col = (blk._px - offsetX) / cellSize - 0.5;
+    blk.row = (blk._py - offsetY) / cellSize - 0.5;
+  });
+
+  // --- Hazards ---
+  updateHazards(dt);
+  projectiles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; });
+  projectiles = projectiles.filter(p => {
+    const c = cellOf(p.x, p.y);
+    return c.col >= 0 && c.col < COLS && c.row >= 0 && c.row < ROWS;
+  });
+
+  // hazard/projectile collision with marble
+  const allThreats = hazards.concat(projectiles);
+  for (const hz of allThreats) {
+    const hzPx = (hz.type === 'patrol' && hz.axis === 'y') ? toPx(hz.col, hz.y) :
+                 (hz.type) ? toPx(hz.x !== undefined ? hz.x : hz.col, hz.y !== undefined ? hz.y : hz.row) :
+                 { x: hz.x, y: hz.y };
+    const size = (hz.size || 0.35) * cellSize;
+    const dx = marble.x - hzPx.x, dy = marble.y - hzPx.y;
+    if (Math.hypot(dx, dy) < marble.r + size) {
+      triggerFail('hit', 'Something got you.');
+      return;
+    }
+  }
+
+  // --- Switches ---
+  (level.switches || []).forEach(sw => {
+    const swPx = toPx(sw.col + 0.5, sw.row + 0.5);
+    const dist = Math.hypot(marble.x - swPx.x, marble.y - swPx.y);
+    if (dist < marble.r + cellSize * 0.22 && !switchActive[sw.id]) {
+      if (level.sequenceMode) {
+        const order = level.switches.map(s => s.id);
+        const expected = order[sequenceProgress];
+        if (sw.id === expected) {
+          switchActive[sw.id] = true;
+          sequenceProgress++;
+          if (sequenceProgress >= order.length) {
+            sw.doors.forEach(d => doorOpenState[d] = true);
+          }
+        } else {
+          order.forEach(id => switchActive[id] = false);
+          sequenceProgress = 0;
+          Object.keys(doorOpenState).forEach(d => doorOpenState[d] = false);
+        }
+      } else {
+        switchActive[sw.id] = true;
+        sw.doors.forEach(d => doorOpenState[d] = true);
+      }
+    }
+  });
+
+  // --- Pressure plate ---
+  if (level.plate) {
+    const pp = level.plate;
+    const ppPx = toPx(pp.col + 0.5, pp.row + 0.5);
+    let weighted = Math.hypot(marble.x - ppPx.x, marble.y - ppPx.y) < cellSize * 0.4;
+    heavyBlocks.forEach(blk => {
+      if (Math.hypot(blk._px - ppPx.x, blk._py - ppPx.y) < cellSize * 0.4) weighted = true;
+    });
+    plateWeighted = weighted;
+    pp.doors.forEach(d => doorOpenState[d] = weighted);
+  }
+
+  // --- Timed doors ---
+  (level.timedDoors || []).forEach((td, i) => {
+    const cyclePos = (elapsedTime + td.phase) % td.period;
+    timedDoorsState[i].open = cyclePos < td.openDuration;
+  });
+
+  // --- Flood ---
+  if (level.flood) {
+    floodElapsed += dt;
+    if (floodElapsed > level.flood.interval && floodIndex < level.flood.rows.length) {
+      floodElapsed = 0;
+      const r = level.flood.rows[floodIndex];
+      for (let c = 1; c < COLS - 1; c++) {
+        if (tileAt(c, r) !== '#' && tileAt(c,r) !== 'G' ) setTile(c, r, ' ');
+      }
+      floodIndex++;
+    }
+  }
+
+  // --- Fall / void check ---
+  const cc = Math.floor(mCell.col), rr = Math.floor(mCell.row);
+  const underTile = tileAt(cc, rr);
+  if (underTile === ' ' && !fallAnim) {
+    triggerFail('fall', level.flood && level.flood.theme === 'lava' ? 'Swallowed by lava.' : 'You fell off the edge.');
+    return;
+  }
+
+  // --- Win check ---
+  checkWin();
+}
+
+function resolveGridCollisions(body, dt) {
+  resolveGridCollisionsGeneric(body, body.r, dt, false);
+}
+
+function resolveGridCollisionsGeneric(body, radius, dt, isBlock) {
+  const centerCell = cellOf(isBlock ? body._px : body.x, isBlock ? body._py : body.y);
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const col = centerCell.col + dc, row = centerCell.row + dr;
+      const ch = tileAt(col, row);
+      let solid = isSolidTile(ch, col, row);
+      let oneWayBlock = false;
+      if (ch === '>' || ch === '<') {
+        // one-way: block if moving against the allowed direction while overlapping
+        const bvx = isBlock ? body._vx : body.vx;
+        const allowedSign = ch === '>' ? 1 : -1;
+        if (bvx * allowedSign < -5) oneWayBlock = true;
+      }
+      if (!solid && !oneWayBlock) continue;
+
+      const cellPx = toPx(col, row);
+      const left = cellPx.x, top = cellPx.y, right = left + cellSize, bottom = top + cellSize;
+      const bx = isBlock ? body._px : body.x, by = isBlock ? body._py : body.y;
+      const closestX = clamp(bx, left, right);
+      const closestY = clamp(by, top, bottom);
+      const dx = bx - closestX, dy = by - closestY;
+      const dist = Math.hypot(dx, dy);
+      if (dist < radius && dist > 0.0001) {
+        const overlap = radius - dist;
+        const nx = dx / dist, ny = dy / dist;
+        if (isBlock) {
+          body._px += nx * overlap; body._py += ny * overlap;
+          const vn = body._vx * nx + body._vy * ny;
+          if (vn < 0) { body._vx -= vn * nx * (1+RESTITUTION); body._vy -= vn * ny * (1+RESTITUTION); }
+        } else {
+          body.x += nx * overlap; body.y += ny * overlap;
+          const vn = body.vx * nx + body.vy * ny;
+          if (vn < 0) { body.vx -= vn * nx * (1+RESTITUTION); body.vy -= vn * ny * (1+RESTITUTION); }
+        }
+      } else if (dist === 0) {
+        // dead center overlap fallback
+        if (isBlock) { body._vx *= -RESTITUTION; body._vy *= -RESTITUTION; }
+        else { body.vx *= -RESTITUTION; body.vy *= -RESTITUTION; }
+      }
+    }
+  }
+}
+
+function updateHazards(dt) {
+  hazards.forEach(hz => {
+    if (hz.type === 'patrol') {
+      if (hz.axis === 'x') {
+        hz.x += hz.dirSign * hz.speed * dt;
+        if (hz.x > Math.max(hz.from, hz.to)) { hz.x = Math.max(hz.from, hz.to); hz.dirSign = -1; }
+        if (hz.x < Math.min(hz.from, hz.to)) { hz.x = Math.min(hz.from, hz.to); hz.dirSign = 1; }
+        hz.col = hz.x; hz.row = hz.row; hz.y = hz.row;
+      } else {
+        hz.y += hz.dirSign * hz.speed * dt;
+        if (hz.y > Math.max(hz.from, hz.to)) { hz.y = Math.max(hz.from, hz.to); hz.dirSign = -1; }
+        if (hz.y < Math.min(hz.from, hz.to)) { hz.y = Math.min(hz.from, hz.to); hz.dirSign = 1; }
+        hz.x = hz.col;
+      }
+    } else if (hz.type === 'hunter') {
+      const dx = marble.x - toPx(hz.x, hz.y).x;
+      const dy = marble.y - toPx(hz.x, hz.y).y;
+      const dist = Math.hypot(dx, dy) || 1;
+      hz.x += (dx/dist) * (hz.speed*dt)/cellSize;
+      hz.y += (dy/dist) * (hz.speed*dt)/cellSize;
+    } else if (hz.type === 'turret') {
+      hz.cooldown -= dt;
+      if (hz.cooldown <= 0) {
+        hz.cooldown = hz.interval;
+        const p = toPx(hz.col + 0.5, hz.row + 0.5);
+        projectiles.push({
+          x: p.x, y: p.y,
+          vx: hz.dir.x * hz.projSpeed * cellSize,
+          vy: hz.dir.y * hz.projSpeed * cellSize,
+          size: hz.size || 0.25
+        });
+      }
+      hz.x = hz.col; hz.y = hz.row;
+    }
+  });
+}
+
+function checkWin() {
+  if (gameOver) return;
+  if (level.winType === 'pocket') {
+    const pocket = findChar('K');
+    if (pocket && targetBall) {
+      const pp = toPx(pocket.col + 0.5, pocket.row + 0.5);
+      const dist = Math.hypot(targetBall._px - pp.x, targetBall._py - pp.y);
+      if (dist < cellSize * 0.3) triggerWin();
+    }
+    return;
+  }
+  const goal = findChar('G');
+  if (!goal) return;
+  const gp = toPx(goal.col + 0.5, goal.row + 0.5);
+  const dist = Math.hypot(marble.x - gp.x, marble.y - gp.y);
+  if (dist < cellSize * 0.35) {
+    if (level.requireAllPinsDown && !pins.every(p => p.state === 'down')) return;
+    triggerWin();
+  }
+}
+
+function findChar(ch) {
+  for (let r = 0; r < tiles.length; r++)
+    for (let c = 0; c < tiles[r].length; c++)
+      if (tiles[r][c] === ch) return { col:c, row:r };
+  return null;
+}
+
+function triggerWin() {
+  gameOver = true;
+  running = false;
+  showResult(true);
+}
+function triggerFail(reason, message) {
+  gameOver = true;
+  running = false;
+  showResult(false, message);
+}
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0e1013';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let r = 0; r < tiles.length; r++) {
+    for (let c = 0; c < tiles[r].length; c++) {
+      const ch = tiles[r][c];
+      const p = toPx(c, r);
+      drawTile(ch, p.x, p.y, c, r);
+    }
+  }
+
+  // pins
+  pins.forEach(p => {
+    if (p.state === 'down') return;
+    const px = toPx(p.col + 0.5, p.row + 0.5);
     ctx.beginPath();
-    ctx.ellipse(marble.x, marble.y + marble.r * 0.55, marble.r * 0.95, marble.r * 0.4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.filter = 'blur(2px)';
-    ctx.fill();
-    ctx.restore();
-
-    // Marble body — metallic radial gradient
-    const grad = ctx.createRadialGradient(
-      marble.x - marble.r * 0.35, marble.y - marble.r * 0.4, marble.r * 0.1,
-      marble.x, marble.y, marble.r
-    );
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.18, '#e8edf1');
-    grad.addColorStop(0.4, '#aab4bf');
-    grad.addColorStop(0.7, '#5b6570');
-    grad.addColorStop(1, '#1c2026');
-
-    ctx.beginPath();
-    ctx.arc(marble.x, marble.y, marble.r, 0, Math.PI * 2);
+    ctx.arc(px.x, px.y, cellSize * 0.24, 0, Math.PI*2);
+    const grad = ctx.createRadialGradient(px.x-4, px.y-6, 2, px.x, px.y, cellSize*0.24);
+    grad.addColorStop(0, '#ffe9b0'); grad.addColorStop(1, '#c98f2e');
     ctx.fillStyle = grad;
     ctx.fill();
+  });
 
-    // Rim light
+  // heavy blocks + target ball
+  heavyBlocks.forEach(b => drawBlock(b, '#8d97a3'));
+  if (targetBall) drawBlock(targetBall, '#d8895e');
+
+  // hazards
+  hazards.forEach(hz => {
+    let px;
+    if (hz.type === 'turret') px = toPx(hz.col + 0.5, hz.row + 0.5);
+    else px = toPx(hz.x + (hz.type==='patrol'&&hz.axis==='x'?0:0.5), hz.y + (hz.type==='patrol'&&hz.axis==='y'?0:0.5));
+    const size = (hz.size || 0.35) * cellSize;
     ctx.beginPath();
-    ctx.arc(marble.x, marble.y, marble.r - 0.5, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(94, 200, 216, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.arc(px.x, px.y, size, 0, Math.PI*2);
+    ctx.fillStyle = hz.type === 'hunter' ? '#d84a4a' : (hz.type === 'turret' ? '#8a6bd8' : '#d86a5e');
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // projectiles
+  projectiles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, (p.size||0.25)*cellSize, 0, Math.PI*2);
+    ctx.fillStyle = '#8a6bd8';
+    ctx.fill();
+  });
+
+  // marble
+  drawMarble();
+}
+
+function drawTile(ch, x, y, c, r) {
+  const s = cellSize;
+  if (ch === '#') {
+    ctx.fillStyle = '#2a2f38';
+    ctx.fillRect(x, y, s, s);
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.strokeRect(x+0.5, y+0.5, s-1, s-1);
+    return;
   }
-
-  function loop(t) {
-    if (!running) return;
-    if (lastTime === null) lastTime = t;
-    let dt = (t - lastTime) / 1000;
-    dt = Math.min(dt, 0.05); // clamp for tab-switch spikes
-    lastTime = t;
-
-    step(dt);
-    draw();
-
-    requestAnimationFrame(loop);
+  if (ch === ' ') { return; } // void — background shows through
+  if (ch === 'G') {
+    ctx.fillStyle = '#1a2a24';
+    ctx.fillRect(x, y, s, s);
+    ctx.beginPath();
+    ctx.arc(x+s/2, y+s/2, s*0.32, 0, Math.PI*2);
+    ctx.strokeStyle = '#7ed6a5'; ctx.lineWidth = 3; ctx.stroke();
+    return;
   }
-
-  function startLoop() {
-    if (running) return;
-    running = true;
-    lastTime = null;
-    requestAnimationFrame(loop);
+  if (ch === 'K') {
+    ctx.fillStyle = '#0e1013';
+    ctx.beginPath(); ctx.arc(x+s/2, y+s/2, s*0.36, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.stroke();
+    return;
   }
-
-  // ---- Permission / start flow ----
-  function beginGame() {
-    overlay.classList.add('hidden');
-    resetMarble();
-    startLoop();
+  if (ch === 'I') { ctx.fillStyle = '#204048'; ctx.fillRect(x,y,s,s); ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(x,y,s,s); return; }
+  if (ch === 'C') { ctx.fillStyle = '#3a3226'; ctx.fillRect(x,y,s,s); return; }
+  if (ch === 'B') {
+    const hp = breakableHp[keyOf(c,r)] || 0;
+    ctx.fillStyle = hp >= 2 ? '#7d5b8a' : '#4a3a52';
+    ctx.fillRect(x,y,s,s);
+    return;
   }
-
-  function setupOrientationListener() {
-    window.addEventListener('deviceorientation', handleOrientation, true);
+  const door = level.doors && level.doors.find(d => d.col === c && d.row === r);
+  if (door) { ctx.fillStyle = doorOpenState[door.id] ? '#1a2a24' : '#5a3a3a'; ctx.fillRect(x,y,s,s); return; }
+  if (level.plate && level.plate.col === c && level.plate.row === r) {
+    ctx.fillStyle = plateWeighted ? '#3a5a48' : '#33373f'; ctx.fillRect(x,y,s,s); return;
   }
-
-  startBtn.addEventListener('click', async () => {
-    // iOS 13+ requires explicit permission request from a user gesture
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const result = await DeviceOrientationEvent.requestPermission();
-        if (result === 'granted') {
-          setupOrientationListener();
-          beginGame();
-        } else {
-          statusEl.textContent = 'Motion access denied. Enable it in Settings → Safari → Motion & Orientation Access, then reload.';
-          statusEl.classList.add('warn');
-        }
-      } catch (err) {
-        statusEl.textContent = 'Could not request motion permission: ' + err.message;
-        statusEl.classList.add('warn');
-      }
-    } else if (window.DeviceOrientationEvent) {
-      // Android / older browsers — no explicit permission step
-      setupOrientationListener();
-      beginGame();
-    } else {
-      statusEl.textContent = 'This device/browser does not support motion tilt input.';
-      statusEl.classList.add('warn');
+  if (level.switches && level.switches.some(sw => sw.col === c && sw.row === r)) {
+    const sw = level.switches.find(sw => sw.col === c && sw.row === r);
+    ctx.fillStyle = switchActive[sw.id] ? '#3a5a48' : '#33373f';
+    ctx.fillRect(x,y,s,s);
+    ctx.fillStyle = 'rgba(230,235,240,0.7)';
+    ctx.font = (s*0.35)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(sw.id, x+s/2, y+s/2);
+    return;
+  }
+  if (ch === '>' || ch === '<') {
+    ctx.fillStyle = '#1c2a33'; ctx.fillRect(x,y,s,s);
+    ctx.fillStyle = 'rgba(94,200,216,0.6)';
+    ctx.font = (s*0.5)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ch, x+s/2, y+s/2);
+    return;
+  }
+  if (level.timedDoors) {
+    const idx = level.timedDoors.findIndex(td => td.col === c && td.row === r);
+    if (idx >= 0) {
+      const open = timedDoorsState[idx] && timedDoorsState[idx].open;
+      ctx.fillStyle = open ? '#1a2a24' : '#5a3a3a';
+      ctx.fillRect(x,y,s,s);
+      return;
     }
-  });
+  }
+  // default floor
+  ctx.fillStyle = ((c+r) % 2 === 0) ? '#1c2028' : '#191d24';
+  ctx.fillRect(x, y, s, s);
+}
 
-  recenterBtn.addEventListener('click', () => {
-    betaOffset = rawBeta;
-    gammaOffset = rawGamma;
-  });
+function drawBlock(b, color) {
+  const x = b._px !== undefined ? b._px : toPx(b.col+0.5, b.row+0.5).x;
+  const y = b._py !== undefined ? b._py : toPx(b.col+0.5, b.row+0.5).y;
+  const r = cellSize * 0.3;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI*2);
+  const grad = ctx.createRadialGradient(x-4,y-6,2,x,y,r);
+  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.4, color); grad.addColorStop(1, '#1c2026');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function drawMarble() {
+  const r = marble.r;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(marble.x, marble.y + r*0.55, r*0.95, r*0.4, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fill();
+  ctx.restore();
+
+  const grad = ctx.createRadialGradient(
+    marble.x - r*0.35, marble.y - r*0.4, r*0.1, marble.x, marble.y, r
+  );
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.18, '#e8edf1');
+  grad.addColorStop(0.4, '#aab4bf');
+  grad.addColorStop(0.7, '#5b6570');
+  grad.addColorStop(1, '#1c2026');
+
+  ctx.beginPath();
+  ctx.arc(marble.x, marble.y, r, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(94, 200, 216, 0.25)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+/* =====================================================================
+   HUD
+   ===================================================================== */
+function updateHud() {
+  hudLevelName.textContent = level.name;
+  hudTimerBlock.style.display = level.flood ? 'block' : 'none';
+  hudObjectiveBlock.style.display = level.requireAllPinsDown || level.sequenceMode || level.winType === 'pocket' ? 'block' : 'none';
+  if (level.requireAllPinsDown) hudObjective.textContent = 'Knock down all pins';
+  else if (level.sequenceMode) hudObjective.textContent = 'Hit switches in order';
+  else if (level.winType === 'pocket') hudObjective.textContent = 'Push ball into pocket';
+}
+
+function tickHud() {
+  if (level.flood) {
+    const remaining = Math.max(0, level.flood.rows.length * level.flood.interval - (floodIndex * level.flood.interval + floodElapsed));
+    hudTimer.textContent = remaining.toFixed(1) + 's';
+    hudTimer.classList.toggle('warnColor', remaining < 5);
+  }
+}
+
+/* =====================================================================
+   GAME LOOP
+   ===================================================================== */
+function loop(t) {
+  if (!running) return;
+  if (lastTime === null) lastTime = t;
+  let dt = Math.min((t - lastTime) / 1000, 0.05);
+  lastTime = t;
+  step(dt);
+  tickHud();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function startLoop() {
+  running = true;
+  lastTime = null;
+  requestAnimationFrame(loop);
+}
+
+/* =====================================================================
+   FLOW: menu -> level select -> game -> result
+   ===================================================================== */
+let sensorsReady = false;
+let pendingLevelId = null;
+
+function startLevel(id) {
+  const lvl = LEVELS.find(l => l.id === id);
+  if (!lvl) return;
+  pendingLevelId = id;
+  if (!sensorsReady) {
+    permOverlay.classList.remove('hidden');
+    return;
+  }
+  resize();
+  showScreen('game');
+  loadLevel(lvl);
+  resultOverlay.classList.add('hidden');
+  startLoop();
+}
+
+startBtn.addEventListener('click', async () => {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceOrientationEvent.requestPermission();
+      if (result === 'granted') {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        sensorsReady = true;
+        permOverlay.classList.add('hidden');
+        if (pendingLevelId) startLevel(pendingLevelId);
+      } else {
+        permStatus.textContent = 'Motion access denied. Enable it in Settings → Safari → Motion & Orientation Access, then reload.';
+      }
+    } catch (err) {
+      permStatus.textContent = 'Could not request motion permission: ' + err.message;
+    }
+  } else if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    sensorsReady = true;
+    permOverlay.classList.add('hidden');
+    if (!window.isSecureContext) {
+      permStatus.textContent = '⚠️ Not on HTTPS/localhost — sensors may not fire. Host this over HTTPS.';
+    }
+    if (pendingLevelId) startLevel(pendingLevelId);
+  } else {
+    permStatus.textContent = 'This device/browser does not support motion tilt input.';
+  }
+});
+
+document.getElementById('exitBtn').addEventListener('click', () => {
+  running = false;
+  showScreen('levelSelect');
+});
+
+function showResult(won, message) {
+  resultOverlay.classList.remove('hidden');
+  if (won) {
+    resultIcon.textContent = '🏁';
+    resultTitle.textContent = 'Level Complete';
+    resultMessage.textContent = 'Nicely rolled.';
+    const cat = level.category, tier = level.tier;
+    const next = LEVELS.find(l => l.category === cat && l.tier === tier + 1);
+    resultNext.style.display = next ? 'inline-block' : 'none';
+    resultNext.onclick = () => { resultOverlay.classList.add('hidden'); startLevel(next.id); };
+  } else {
+    resultIcon.textContent = '💥';
+    resultTitle.textContent = 'Try Again';
+    resultMessage.textContent = message || 'That didn\'t go as planned.';
+    resultNext.style.display = 'none';
+  }
+}
+
+resultRetry.addEventListener('click', () => {
+  resultOverlay.classList.add('hidden');
+  startLevel(level.id);
+});
+resultMenu.addEventListener('click', () => {
+  running = false;
+  resultOverlay.classList.add('hidden');
+  showScreen('levelSelect');
+});
 
 })();
 </script>
