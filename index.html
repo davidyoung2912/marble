@@ -2,1452 +2,1748 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Tilt Marble</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riptide — a trick-taking game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --steel-dark: #14171c;
-    --steel: #1e2229;
-    --steel-light: #2a2f38;
-    --accent: #5ec8d8;
-    --accent-dim: #3a7d88;
-    --text: #e7edf2;
-    --text-dim: #7b8794;
-    --danger: #d86a5e;
-    --success: #7ed6a5;
-    --warn: #e8c468;
+  :root{
+    --deep: #072436;
+    --deep2: #0B3A52;
+    --teal: #14636E;
+    --foam: #DCEEEA;
+    --sand: #F2E9D8;
+    --coral: #FF6A4D;
+    --coral-dim: #C94F39;
+    --ink: #06202E;
+    --gold: #E7C873;
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-    background: var(--steel-dark);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: var(--text);
-    touch-action: none;
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:
+      radial-gradient(ellipse at 50% -10%, var(--teal) 0%, transparent 55%),
+      linear-gradient(180deg, var(--deep) 0%, #041721 100%);
+    color:var(--foam);
+    font-family:'Space Mono', monospace;
+    overflow-x:hidden;
+    min-height:100vh;
   }
-  .screen {
-    position: fixed; inset: 0;
-    display: none;
-    flex-direction: column;
-    background: radial-gradient(circle at 50% 30%, #1c2028 0%, #101317 80%);
-    padding: env(safe-area-inset-top, 18px) 18px env(safe-area-inset-bottom, 18px) 18px;
-    overflow-y: auto;
-  }
-  .screen.active { display: flex; }
+  .display{font-family:'Fraunces', serif;}
 
-  /* ---------- Shared bits ---------- */
-  h1.title { font-size: 22px; font-weight: 700; margin: 6px 0 2px 0; }
-  p.subtitle { font-size: 13px; color: var(--text-dim); margin: 0 0 18px 0; line-height: 1.5; }
-  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .backBtn {
-    appearance: none; border: none; background: var(--steel-light); color: var(--text);
-    font-size: 14px; padding: 8px 14px; border-radius: 10px; font-weight: 600;
-  }
-  .backBtn:active { transform: scale(0.96); }
+  /* ---------- Ambient tide lines ---------- */
+  .tide-lines{position:fixed; inset:0; pointer-events:none; z-index:0; opacity:0.12;}
+  .tide-lines svg{width:100%; height:100%;}
 
-  /* ---------- Category menu ---------- */
-  .catGrid { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-  .catCard {
-    display: flex; align-items: center; gap: 14px;
-    background: linear-gradient(180deg, var(--steel-light) 0%, var(--steel) 100%);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 14px; padding: 14px 16px;
-    text-align: left;
+  /* ---------- Header ---------- */
+  header{
+    position:relative; z-index:2;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 28px 10px;
+    flex-wrap:wrap; gap:12px;
   }
-  .catCard:active { transform: scale(0.98); }
-  .catIcon {
-    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; background: rgba(94,200,216,0.12);
+  .title-block{display:flex; align-items:baseline; gap:14px;}
+  h1{
+    font-family:'Fraunces', serif; font-weight:700; font-size:28px;
+    margin:0; letter-spacing:0.5px; color:var(--sand);
   }
-  .catInfo { flex: 1; min-width: 0; }
-  .catName { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-  .catDesc { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
-  .catOrder { font-size: 10px; color: var(--accent); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 3px; }
-  .catStars { font-size: 11px; color: var(--warn); margin-top: 4px; }
+  .subtitle{font-size:11px; color:#8FB9BE; letter-spacing:1.5px; text-transform:uppercase;}
 
-  /* ---------- Level select ---------- */
-  .levelList { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-  .levelCard {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--steel-light); border-radius: 14px; padding: 14px 16px;
-    border: 1px solid rgba(255,255,255,0.06);
+  .scoreboard{display:flex; gap:10px; flex-wrap:wrap;}
+  .score-pill{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:20px; padding:6px 14px;
+    font-size:12px; display:flex; align-items:center; gap:8px;
+    max-width:150px;
   }
-  .levelCard:active { transform: scale(0.98); }
-  .levelTier {
-    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px;
-    background: rgba(94,200,216,0.15); color: var(--accent);
+  .score-pill.you{border-color:var(--coral); background:rgba(255,106,77,0.1);}
+  @keyframes pillFlash{
+    0%,100%{ box-shadow:none; }
+    25%,75%{ box-shadow:0 0 0 3px rgba(231,200,115,0.75), 0 0 16px rgba(231,200,115,0.55); }
+    50%{ box-shadow:none; }
   }
-  .levelInfo { flex: 1; }
-  .levelName { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-  .levelDiff { font-size: 11px; color: var(--text-dim); }
-  .levelStars { color: var(--warn); font-size: 12px; }
+  .score-pill.flash{ animation: pillFlash 0.9s ease-in-out 2; }
+  .pill-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .score-num{font-family:'Fraunces',serif; font-weight:700; font-size:16px; color:var(--gold); flex-shrink:0;}
 
-  /* ---------- Game screen ---------- */
-  #gameScreen { padding: 0; }
-  #stage { position: fixed; inset: 0; display: block; }
-  #hud {
-    position: fixed; top: env(safe-area-inset-top, 0); left: 0; right: 0;
-    padding: 12px 14px 0 14px;
-    display: flex; justify-content: space-between; align-items: flex-start;
-    pointer-events: none; z-index: 4;
+  /* ---------- Tide gauge ---------- */
+  .tide-gauge{
+    position:relative; z-index:2;
+    margin:0 auto 6px; max-width:640px;
+    padding:10px 20px; text-align:center;
   }
-  .hud-left, .hud-right { display: flex; flex-direction: column; gap: 6px; }
-  .hud-block {
-    background: rgba(20, 23, 28, 0.6); border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px; padding: 6px 11px; backdrop-filter: blur(6px);
+  .tide-label{font-size:10px; letter-spacing:2px; color:#8FB9BE; text-transform:uppercase; margin-bottom:6px;}
+  .tide-rank{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:54px; height:54px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffdca8, var(--gold) 60%, var(--coral-dim));
+    color:var(--ink); font-family:'Fraunces',serif; font-weight:700; font-size:22px;
+    box-shadow:0 0 0 4px rgba(231,200,115,0.15), 0 0 22px rgba(231,200,115,0.35);
+    animation: pulse 2.6s ease-in-out infinite;
+    transition: background 0.3s ease;
   }
-  .hud-label { font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-dim); }
-  .hud-value { font-size: 14px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .hud-value.warnColor { color: var(--danger); }
-  #exitBtn {
-    pointer-events: auto; appearance: none; border: none;
-    background: rgba(30,34,41,0.7); color: var(--text); font-size: 13px; font-weight: 600;
-    padding: 8px 13px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+  .tide-rank.flipping{
+    animation: coinflip 0.85s ease-in-out;
+    background:radial-gradient(circle at 35% 30%, #cfe6e6, #8FB9BE 60%, #4c7e83);
+    box-shadow:0 0 0 4px rgba(143,185,190,0.15), 0 0 18px rgba(143,185,190,0.3);
+  }
+  @keyframes coinflip{
+    0%{ transform:rotateY(0deg) scale(1); }
+    45%{ transform:rotateY(180deg) scale(1.08); }
+    55%{ transform:rotateY(180deg) scale(1.08); }
+    100%{ transform:rotateY(360deg) scale(1); }
+  }
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.06); }
+  }
+  .tide-note{font-size:11px; color:#B9D8D3; margin-top:6px; min-height:16px;}
+
+  /* ---------- Bid tracker (live during play) ---------- */
+  .bid-tracker{
+    display:flex; justify-content:center; gap:8px; flex-wrap:wrap;
+    max-width:900px; margin:0 auto 10px; padding:0 16px; min-height:1px;
+  }
+  .bid-chip{
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+    border-radius:14px; padding:4px 11px; font-size:11px; color:#B9D8D3;
+    display:flex; align-items:center; gap:5px; white-space:nowrap;
+  }
+  .bid-chip.you{ border-color:var(--coral); background:rgba(255,106,77,0.08); }
+  .bid-chip .progress-num{ font-family:'Fraunces',serif; font-weight:700; color:var(--gold); }
+  .bid-chip.over .progress-num{ color:var(--coral); }
+
+  /* ---------- Table ---------- */
+  .table-wrap{
+    position:relative; z-index:2;
+    max-width:900px; margin:6px auto 0;
+    padding:0 16px;
+  }
+  .table{
+    position:relative;
+    width:100%; aspect-ratio: 1.5 / 1;
+    max-height:420px;
+    margin:0 auto;
+    border-radius:50%/45%;
+    background:
+      radial-gradient(ellipse at center, #0F4C57 0%, #0A3742 60%, #072832 100%);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.55), 0 20px 40px rgba(0,0,0,0.4);
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .seat{
+    position:absolute; text-align:center; font-size:11px; color:#9FC7CA;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .seat .name{letter-spacing:1px; text-transform:uppercase; font-size:10px;}
+  .seat .cardback-row{display:flex;}
+  .seat.turn .name{color:var(--gold);}
+  .cardback{
+    width:22px; height:32px; border-radius:4px; margin-left:-12px;
+    background:repeating-linear-gradient(135deg, #1a5c68, #1a5c68 3px, #124851 3px, #124851 6px);
+    border:1px solid rgba(255,255,255,0.15);
+  }
+  .cardback:first-child{margin-left:0;}
+
+  .seat.west{ top:50%; left:4%; transform:translateY(-50%); flex-direction:row-reverse; }
+  .seat.west .cardback-row{ flex-direction:column; }
+  .seat.west .cardback{ margin-left:0; margin-top:-18px; }
+  .seat.west .cardback:first-child{margin-top:0;}
+
+  .seat.north{ top:3%; left:50%; transform:translateX(-50%); }
+  .seat.east{ top:50%; right:4%; transform:translateY(-50%); flex-direction:row; }
+  .seat.east .cardback-row{ flex-direction:column; }
+  .seat.east .cardback{ margin-left:0; margin-top:-18px; }
+  .seat.east .cardback:first-child{margin-top:0;}
+
+  /* played cards in center */
+  .trick-zone{
+    position:absolute; inset:0;
+  }
+  .played{
+    position:absolute; width:52px; height:74px;
+    transition: all 0.45s cubic-bezier(.2,.8,.2,1);
+  }
+  .played.you{ bottom:4%; left:50%; transform:translate(-50%,0); }
+  .played.west{ left:28%; top:50%; transform:translate(-50%,-50%) rotate(-8deg); }
+  .played.north{ top:28%; left:50%; transform:translate(-50%,0); }
+  .played.east{ right:28%; top:50%; transform:translate(50%,-50%) rotate(8deg); }
+
+  .played.collecting.you{ transform:translate(-50%,0) translateY(-160px) scale(0.4); opacity:0; }
+  .played.collecting.west{ transform:translate(-50%,-50%) translateX(160px) scale(0.4); opacity:0; }
+  .played.collecting.north{ transform:translate(-50%,0) translateY(160px) scale(0.4); opacity:0; }
+  .played.collecting.east{ transform:translate(50%,-50%) translateX(-160px) scale(0.4); opacity:0; }
+
+  .played.riptide-win{ box-shadow:0 0 0 3px var(--coral), 0 0 24px var(--coral); }
+  .played.washed-out{ animation: washPulse 0.9s ease-in-out; }
+  .played.washed-out .card{ filter:grayscale(0.55) brightness(0.85); }
+  @keyframes washPulse{
+    0%{ box-shadow:0 0 0 0 rgba(143,185,190,0.6); }
+    50%{ box-shadow:0 0 0 8px rgba(143,185,190,0.25); }
+    100%{ box-shadow:0 0 0 0 rgba(143,185,190,0); }
   }
 
-  /* ---------- Overlays (permission + win/fail) ---------- */
-  #permOverlay, #resultOverlay {
-    position: fixed; inset: 0; z-index: 10;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; padding: 32px;
-    background: radial-gradient(circle at 50% 35%, #1c2028 0%, #101317 80%);
-    transition: opacity 0.3s ease;
+  .played.led .card{ box-shadow:0 0 0 2px rgba(143,185,190,0.85), 0 3px 8px rgba(0,0,0,0.45); }
+  .played.led::before{
+    content:'LEAD'; position:absolute; top:-15px; left:50%; transform:translateX(-50%);
+    font-size:8px; letter-spacing:1.5px; color:#DCEEEA; background:rgba(20,99,110,0.92);
+    padding:2px 6px; border-radius:5px; font-family:'Space Mono',monospace; z-index:3;
+    white-space:nowrap;
   }
-  #permOverlay.hidden, #resultOverlay.hidden { opacity: 0; pointer-events: none; display: none; }
-  .marble-preview {
-    width: 56px; height: 56px; border-radius: 50%; margin-bottom: 18px;
-    background: radial-gradient(circle at 32% 28%, #f5f7f9 0%, #b7c1cb 22%, #6b7580 55%, #2a2f38 85%, #16181c 100%);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 0 8px rgba(255,255,255,0.15);
+
+  .played.dim .card{ opacity:0.4; filter:grayscale(0.35); transition: opacity 0.35s ease, filter 0.35s ease; }
+
+  .winner-banner{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.7);
+    background:rgba(7,36,54,0.94); border:1px solid rgba(231,200,115,0.45);
+    color:var(--gold); font-family:'Fraunces',serif; font-weight:700; font-size:14px;
+    padding:11px 20px; border-radius:11px; white-space:nowrap; z-index:9;
+    box-shadow:0 10px 26px rgba(0,0,0,0.55); pointer-events:none; opacity:0;
+    animation: bannerPop 0.3s ease forwards, bannerHold 1.85s linear 0.3s forwards, bannerFade 0.35s ease 2.15s forwards;
   }
-  #permOverlay h1, #resultOverlay h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px 0; }
-  #permOverlay p, #resultOverlay p { color: var(--text-dim); font-size: 13px; line-height: 1.5; max-width: 300px; margin: 0 0 22px 0; }
-  button.primary {
-    appearance: none; border: none; background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dim) 100%);
-    color: #0a1214; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(94, 200, 216, 0.25); margin: 4px;
+  .winner-banner.riptide{ border-color:var(--coral); color:var(--coral); }
+  .winner-banner.washed{ border-color:#8FB9BE; color:#DCEEEA; }
+  @keyframes bannerPop{ 0%{ transform:translate(-50%,-50%) scale(0.7); opacity:0; } 100%{ transform:translate(-50%,-50%) scale(1); opacity:1; } }
+  @keyframes bannerHold{ from{ opacity:1; } to{ opacity:1; } }
+  @keyframes bannerFade{ from{ opacity:1; } to{ opacity:0; } }
+
+  /* ---------- Card look ---------- */
+  .card{
+    width:100%; height:100%; border-radius:6px;
+    background:var(--sand);
+    color:var(--ink);
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:4px 5px; font-family:'Fraunces', serif; font-weight:600;
+    box-shadow:0 3px 8px rgba(0,0,0,0.45);
+    position:relative;
+    user-select:none;
   }
-  button.secondary {
-    appearance: none; border: 1px solid rgba(255,255,255,0.15); background: transparent;
-    color: var(--text); font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 12px; margin: 4px;
+  .card.red{ color:var(--coral-dim); }
+  .card .corner{ font-size:13px; line-height:1; }
+  .card .corner.bottom{ align-self:flex-end; transform:rotate(180deg); }
+  .card .pip{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-size:22px;
   }
-  button:active { transform: scale(0.97); }
-  #permStatus { margin-top: 14px; font-size: 12px; color: var(--danger); max-width: 300px; }
-  #resultIcon { font-size: 40px; margin-bottom: 10px; }
-  .btnRow { display: flex; flex-wrap: wrap; justify-content: center; }
+  .card.tide-hot{
+    outline:2px solid var(--coral); outline-offset:1px;
+    box-shadow:0 0 12px rgba(255,106,77,0.7), 0 3px 8px rgba(0,0,0,0.45);
+  }
+  .card.tide-hot::after{
+    content:'TIDE'; position:absolute; top:60%; left:50%; transform:translate(-50%,-50%);
+    font-size:8.5px; letter-spacing:1.5px; color:#fff; background:var(--coral);
+    padding:2px 6px; border-radius:5px; font-family:'Space Mono',monospace;
+    z-index:2; white-space:nowrap; box-shadow:0 2px 5px rgba(0,0,0,0.4);
+  }
+
+  /* ---------- Hand ---------- */
+  .hand-wrap{
+    position:relative; z-index:2;
+    max-width:900px; margin:8px auto 4px;
+    display:flex; justify-content:center;
+    min-height:110px;
+    padding:0 12px;
+    transition: transform 0.35s ease;
+  }
+  .hand-wrap.bidding-peek{
+    position:fixed; left:0; right:0; bottom:0; z-index:12;
+    max-width:none; margin:0; padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background:linear-gradient(180deg, transparent, rgba(3,15,22,0.92) 35%);
+  }
+  .hand{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .hand-row{
+    display:flex; justify-content:center;
+  }
+  .hand.two-row .hand-row{ margin-bottom:0; }
+  .hand .card-slot{
+    width:58px; height:82px; margin-left:-22px;
+    transition: transform 0.15s ease, margin 0.2s ease;
+    cursor:pointer;
+  }
+  .hand .card-slot:first-child{ margin-left:0; }
+  .hand .card-slot:hover{ transform:translateY(-10px); }
+  .hand .card-slot.disabled{ cursor:not-allowed; filter:brightness(0.55); }
+  .hand .card-slot:active{ transform:translateY(-4px) scale(0.94); }
+  .hand .card-slot.disabled:hover{ transform:none; }
+
+  @keyframes cardWiggle{
+    0%,100%{ transform:rotate(0deg) translateY(0); }
+    20%{ transform:rotate(-4deg) translateY(-4px); }
+    40%{ transform:rotate(3deg) translateY(-6px); }
+    60%{ transform:rotate(-3deg) translateY(-4px); }
+    80%{ transform:rotate(2deg) translateY(-2px); }
+  }
+  .hand .card-slot.recommended{ animation: cardWiggle 1.8s ease-in-out infinite; animation-delay:0.8s; }
+  .hand .card-slot.recommended:hover{ animation-play-state:paused; }
+  .hand .card-slot.recommended .card{
+    box-shadow:0 0 0 2px rgba(231,200,115,0.55), 0 6px 14px rgba(0,0,0,0.4);
+  }
+
+  /* ---------- Score popup ---------- */
+  .score-popup{
+    position:absolute; left:50%; top:0; transform:translate(-50%,0);
+    font-family:'Fraunces',serif; font-weight:700; font-size:15px;
+    color:var(--gold); pointer-events:none;
+    animation: floatUp 1.35s ease-out forwards;
+    text-shadow:0 2px 6px rgba(0,0,0,0.6);
+    z-index:5;
+  }
+  .score-popup.riptide{ color:var(--coral); font-size:18px; }
+  @keyframes floatUp{
+    0%{ transform:translate(-50%,0) scale(0.8); opacity:0; }
+    20%{ opacity:1; transform:translate(-50%,-8px) scale(1.15); }
+    100%{ transform:translate(-50%,-48px) scale(1); opacity:0; }
+  }
+
+  /* ---------- Deal / shuffle FX ---------- */
+  .deal-fx{ position:absolute; inset:0; pointer-events:none; z-index:6; }
+  .deck-stack{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:44px; height:62px;
+  }
+  .deck-stack .stack-card{
+    position:absolute; left:0; top:0; width:44px; height:62px; border-radius:5px;
+    background:repeating-linear-gradient(135deg, #1a5c68, #1a5c68 3px, #124851 3px, #124851 6px);
+    border:1px solid rgba(255,255,255,0.18);
+    box-shadow:0 3px 6px rgba(0,0,0,0.4);
+  }
+  .deck-stack.shuffling .stack-card{ animation: riffle 0.32s ease-in-out infinite; }
+  .deck-stack.shuffling .stack-card:nth-child(2n){ animation-delay:0.05s; }
+  .deck-stack.shuffling .stack-card:nth-child(3n){ animation-delay:0.1s; }
+  @keyframes riffle{
+    0%,100%{ transform:translate(0,0) rotate(0deg); }
+    50%{ transform:translate(var(--riffle-x, 6px), -2px) rotate(var(--riffle-r, 3deg)); }
+  }
+  .flying-card{
+    position:absolute; width:30px; height:42px; border-radius:4px;
+    background:repeating-linear-gradient(135deg, #1a5c68, #1a5c68 3px, #124851 3px, #124851 6px);
+    border:1px solid rgba(255,255,255,0.18);
+    box-shadow:0 3px 6px rgba(0,0,0,0.4);
+    z-index:7;
+  }
+
+  /* ---------- Hand / cardback deal-in stagger ---------- */
+  @keyframes cardDealIn{
+    0%{ transform:translateY(60px) scale(0.7); opacity:0; }
+    100%{ transform:translateY(0) scale(1); opacity:1; }
+  }
+  .hand .card-slot.deal-in{ animation: cardDealIn 0.4s cubic-bezier(.2,.8,.2,1) backwards; }
+  @keyframes backDealIn{
+    0%{ transform:scale(0.4); opacity:0; }
+    100%{ transform:scale(1); opacity:1; }
+  }
+  .cardback.deal-in{ animation: backDealIn 0.3s ease backwards; }
+
+  /* ---------- Played card entrance ---------- */
+  .played.entering.you{ transform:translate(-50%,0) translateY(130px) scale(0.55); opacity:0; }
+  .played.entering.west{ transform:translate(-50%,-50%) translateX(-150px) scale(0.55); opacity:0; }
+  .played.entering.north{ transform:translate(-50%,0) translateY(-130px) scale(0.55); opacity:0; }
+  .played.entering.east{ transform:translate(50%,-50%) translateX(150px) scale(0.55); opacity:0; }
+
+  /* ---------- Mute button ---------- */
+  .mute-btn{
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+    color:var(--foam); width:34px; height:34px; border-radius:50%;
+    cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .mute-btn:hover{ background:rgba(255,255,255,0.14); transform:scale(1.06); }
+
+  /* ---------- Confetti ---------- */
+  .confetti-piece{
+    position:fixed; top:-20px; width:8px; height:14px; z-index:20; pointer-events:none;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(112vh) rotate(560deg); opacity:0.9; }
+  }
+
+  /* ---------- Log / status ---------- */
+  .status-bar{
+    position:relative; z-index:2;
+    max-width:900px; margin:6px auto 0; padding:0 20px;
+    text-align:center; font-size:12px; color:#B9D8D3; min-height:18px;
+    letter-spacing:0.3px;
+  }
+  .status-bar .accent{ color:var(--coral); }
+
+  footer{
+    position:relative; z-index:2;
+    text-align:center; padding:18px 20px 30px; font-size:10px; color:#5F8B90;
+    letter-spacing:1px;
+  }
+
+  /* ---------- Overlay ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:10;
+    background:rgba(3,15,22,0.86);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .overlay.hidden{ display:none; }
+  .overlay.bid-overlay-backdrop{ background:rgba(3,15,22,0.55); align-items:flex-start; padding-top:5vh; }
+  .bid-overlay-backdrop .modal{ max-height:76vh; }
+  .modal{
+    background:linear-gradient(180deg, #0D4552, #082E39);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:14px; padding:32px 30px; max-width:420px; text-align:center;
+    box-shadow:0 30px 60px rgba(0,0,0,0.6);
+    max-height:88vh;
+    display:flex; flex-direction:column;
+  }
+  .modal-scroll{
+    overflow-y:auto; flex:1 1 auto; min-height:0;
+    scrollbar-width:thin; scrollbar-color:rgba(231,200,115,0.4) rgba(255,255,255,0.05);
+  }
+  .modal-scroll::-webkit-scrollbar{ width:8px; }
+  .modal-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,0.05); border-radius:8px; }
+  .modal-scroll::-webkit-scrollbar-thumb{ background:rgba(231,200,115,0.4); border-radius:8px; }
+  .modal-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(231,200,115,0.6); }
+  .modal > button.primary{ flex-shrink:0; }
+  @keyframes modalPop{
+    0%{ transform:scale(0.86) translateY(10px); opacity:0; }
+    100%{ transform:scale(1) translateY(0); opacity:1; }
+  }
+  .modal.anim-in{ animation: modalPop 0.4s cubic-bezier(.2,.9,.25,1.15); }
+  .modal.modal-wide{ max-width:480px; }
+  .modal-eyebrow{
+    font-size:10px; letter-spacing:2.5px; text-transform:uppercase;
+    color:#8FB9BE; margin-bottom:6px;
+  }
+  .modal h2{ font-family:'Fraunces',serif; font-size:26px; margin:0 0 8px; color:var(--gold); }
+  .modal p{ font-size:13px; color:#BFDCD9; line-height:1.6; }
+  .modal-intro{ font-size:13px; color:#BFDCD9; line-height:1.6; margin:0 0 4px; }
+
+  /* ---------- Rule list (intro modal) ---------- */
+  .rule-list{ text-align:left; margin:20px 0 24px; display:flex; flex-direction:column; gap:15px; }
+  .rule-item{ display:flex; gap:12px; align-items:flex-start; }
+  .rule-icon{
+    flex-shrink:0; width:32px; height:32px; border-radius:9px; margin-top:1px;
+    background:rgba(231,200,115,0.12); border:1px solid rgba(231,200,115,0.25);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--gold);
+  }
+  .rule-copy{ padding-top:1px; }
+  .rule-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:13.5px;
+    color:var(--sand); margin-bottom:3px; letter-spacing:0.2px;
+  }
+  .rule-desc{ font-size:12px; color:#B9D8D3; line-height:1.55; }
+  .rule-desc b{ color:var(--coral); font-weight:700; }
+
+  /* ---------- Results table (round-end / game-over modals) ---------- */
+  .results-table{ margin:18px 0 8px; border-top:1px solid rgba(255,255,255,0.1); }
+  .results-row{
+    display:grid; grid-template-columns:34px 1fr auto auto;
+    align-items:center; column-gap:10px; padding:10px 6px;
+    border-bottom:1px solid rgba(255,255,255,0.08); text-align:left;
+  }
+  .results-row.winner{
+    background:linear-gradient(90deg, rgba(231,200,115,0.1), transparent);
+    border-radius:6px;
+  }
+  .results-row .rank-icon{ font-size:12px; text-align:center; white-space:nowrap; letter-spacing:1px; }
+  .results-row .player-name{ font-family:'Fraunces',serif; font-weight:600; font-size:13.5px; color:var(--sand); }
+  .results-row .player-name.you{ color:var(--coral); }
+  .you-badge{
+    font-size:8.5px; background:var(--coral); color:#1c0a05; padding:2px 6px;
+    border-radius:8px; margin-left:6px; letter-spacing:0.5px; text-transform:uppercase;
+    vertical-align:middle; font-family:'Space Mono',monospace; font-weight:700;
+  }
+  .results-row .tricks{ font-size:11px; color:#8FB9BE; white-space:nowrap; }
+  .bid-tag{
+    font-size:9.5px; color:#8FB9BE; background:rgba(255,255,255,0.07);
+    padding:1px 6px; border-radius:6px; margin-left:5px; font-family:'Space Mono',monospace;
+    white-space:nowrap;
+  }
+  .results-row .points{
+    font-family:'Fraunces',serif; font-weight:700; color:var(--gold);
+    font-size:14px; text-align:right; white-space:nowrap;
+  }
+  .results-row .points .delta{
+    display:block; font-size:10px; color:#8FB9BE; font-weight:400;
+    font-family:'Space Mono',monospace;
+  }
+
+  /* ---------- Score progress toward target ---------- */
+  .progress-block{ margin-top:16px; text-align:left; }
+  .score-progress-row{ display:flex; align-items:center; gap:9px; margin-bottom:7px; font-size:11px; color:#9FC7CA; }
+  .score-progress-row .label{ width:44px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .score-progress-bar{ flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; display:flex; }
+  .score-progress-fill{ display:block; height:100%; background:linear-gradient(90deg, var(--teal), var(--gold)); border-radius:3px; transition:width 0.6s ease; }
+  .score-progress-row .val{ width:22px; text-align:right; font-family:'Fraunces',serif; font-weight:600; color:var(--sand); }
+
+  /* ---------- Bid stepper ---------- */
+  .bid-stepper{ display:flex; align-items:center; justify-content:center; gap:22px; margin:24px 0; }
+  .bid-step-btn{
+    width:42px; height:42px; border-radius:50%; border:1px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.06); color:var(--foam); font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+    transition: background 0.15s ease, transform 0.1s ease; font-family:'Space Mono',monospace;
+  }
+  .bid-step-btn:hover{ background:rgba(255,255,255,0.14); }
+  .bid-step-btn:active{ transform:scale(0.92); }
+  .bid-value{
+    font-family:'Fraunces',serif; font-weight:700; font-size:42px; color:var(--gold);
+    min-width:64px; text-align:center;
+  }
+
+  button.primary{
+    background:var(--coral); color:#1c0a05; border:none;
+    font-family:'Space Mono',monospace; font-weight:700; letter-spacing:0.5px;
+    padding:12px 26px; border-radius:8px; cursor:pointer; font-size:13px;
+    margin-top:10px;
+  }
+  button.primary:hover{ background:#ff8163; }
+  button.ghost{
+    background:transparent; color:#B9D8D3; border:1px solid rgba(255,255,255,0.2);
+    padding:10px 20px; border-radius:8px; cursor:pointer; font-size:12px;
+    font-family:'Space Mono',monospace; margin-top:10px; margin-left:8px;
+  }
+
+  @media (max-width:640px){
+    header{ padding:10px 14px 6px; gap:8px; }
+    .title-block{ gap:8px; }
+    h1{font-size:18px;}
+    .subtitle{ display:none; }
+    .scoreboard{ gap:5px; }
+    .score-pill{ padding:3px 8px; font-size:10px; max-width:88px; gap:4px; }
+    .pill-name{ max-width:58px; }
+    .score-num{ font-size:12px; }
+    .mute-btn{ width:28px; height:28px; font-size:12px; }
+
+    .tide-gauge{ padding:6px 14px; margin:0 auto 4px; }
+    .tide-label{ font-size:8.5px; margin-bottom:4px; }
+    .tide-rank{ width:38px; height:38px; font-size:16px; }
+    .tide-note{ font-size:9.5px; margin-top:5px; min-height:0; }
+
+    .bid-tracker{ margin:0 auto 8px; }
+    .bid-chip{ padding:2px 7px; font-size:9.5px; }
+
+    .table-wrap{ margin-top:4px; padding:0 10px; }
+    .table{max-height:340px;}
+
+    .status-bar{ margin-top:8px; min-height:0; font-size:10.5px; padding:2px 14px; }
+
+    .hand-wrap{ margin:10px auto 8px; min-height:78px; }
+    .hand .card-slot{width:46px; height:66px; margin-left:-18px;}
+
+    footer{ padding:8px 20px 16px; font-size:8.5px; }
+  }
 </style>
 </head>
 <body>
 
-<!-- ===================== CATEGORY MENU ===================== -->
-<div class="screen active" id="menuScreen">
-  <h1 class="title">Tilt Marble</h1>
-  <p class="subtitle">Pick a challenge type. Each has 3 levels of increasing difficulty.</p>
-  <div class="catGrid" id="catGrid"></div>
-</div>
+<div class="tide-lines"><svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">
+  <!-- gentle water lines -->
+  <path d="M0,40 Q100,10 200,40 T400,40" stroke="#DCEEEA" fill="none" stroke-width="1"/>
+  <path d="M0,150 Q100,120 200,150 T400,150" stroke="#DCEEEA" fill="none" stroke-width="1"/>
+  <path d="M0,500 Q100,470 200,500 T400,500" stroke="#DCEEEA" fill="none" stroke-width="1"/>
+  <path d="M0,760 Q100,730 200,760 T400,760" stroke="#DCEEEA" fill="none" stroke-width="1"/>
 
-<!-- ===================== LEVEL SELECT ===================== -->
-<div class="screen" id="levelSelectScreen">
-  <div class="topbar">
-    <button class="backBtn" id="levelSelectBack">‹ Categories</button>
+  <!-- compass rose, upper right -->
+  <g transform="translate(330,110)" stroke="#DCEEEA" fill="none" stroke-width="1">
+    <circle r="38"/>
+    <circle r="4"/>
+    <line x1="0" y1="-38" x2="0" y2="38"/>
+    <line x1="-38" y1="0" x2="38" y2="0"/>
+    <line x1="-27" y1="-27" x2="27" y2="27"/>
+    <line x1="-27" y1="27" x2="27" y2="-27"/>
+    <path d="M0,-38 L6,-14 L0,-20 L-6,-14 Z" fill="#DCEEEA" stroke="none"/>
+  </g>
+
+  <!-- lighthouse, lower left -->
+  <g transform="translate(55,700)" stroke="#DCEEEA" fill="none" stroke-width="1">
+    <path d="M-10,0 L10,0 L7,-70 L-7,-70 Z"/>
+    <path d="M-7,-70 L-12,-82 L12,-82 L7,-70 Z"/>
+    <line x1="-12" y1="-82" x2="-12" y2="-92"/>
+    <line x1="12" y1="-82" x2="12" y2="-92"/>
+    <line x1="-12" y1="-92" x2="12" y2="-92"/>
+    <path d="M-3,-92 L-3,-100 L3,-100 L3,-92"/>
+    <line x1="-14" y1="0" x2="14" y2="0"/>
+    <line x1="-16" y1="6" x2="16" y2="6"/>
+  </g>
+
+  <!-- sailboats -->
+  <g transform="translate(90,220)" stroke="#DCEEEA" fill="none" stroke-width="1">
+    <path d="M-24,10 Q0,22 24,10 L18,16 Q0,26 -18,16 Z"/>
+    <line x1="0" y1="10" x2="0" y2="-34"/>
+    <path d="M0,-34 L0,4 L-22,4 Z"/>
+  </g>
+  <g transform="translate(320,610) scale(0.8)" stroke="#DCEEEA" fill="none" stroke-width="1">
+    <path d="M-24,10 Q0,22 24,10 L18,16 Q0,26 -18,16 Z"/>
+    <line x1="0" y1="10" x2="0" y2="-34"/>
+    <path d="M0,-34 L0,4 L22,4 Z"/>
+  </g>
+
+  <!-- anchor -->
+  <g transform="translate(345,430)" stroke="#DCEEEA" fill="none" stroke-width="1">
+    <circle cx="0" cy="-22" r="6"/>
+    <line x1="0" y1="-16" x2="0" y2="20"/>
+    <path d="M-16,6 Q0,26 16,6"/>
+    <line x1="-16" y1="-2" x2="16" y2="-2"/>
+    <path d="M-16,6 L-22,-2 M16,6 L22,-2"/>
+  </g>
+
+  <!-- gulls -->
+  <path d="M30,90 Q36,84 42,90 Q48,84 54,90" stroke="#DCEEEA" fill="none" stroke-width="1"/>
+  <path d="M120,340 Q125,335 130,340 Q135,335 140,340" stroke="#DCEEEA" fill="none" stroke-width="1"/>
+  <path d="M260,260 Q266,254 272,260 Q278,254 284,260" stroke="#DCEEEA" fill="none" stroke-width="1"/>
+</svg></div>
+
+<header>
+  <div class="title-block">
+    <h1>Riptide</h1>
+    <span class="subtitle">a trick-taking game</span>
   </div>
-  <h1 class="title" id="levelSelectTitle">Category</h1>
-  <p class="subtitle" id="levelSelectDesc"></p>
-  <div class="levelList" id="levelList"></div>
+  <div class="scoreboard" id="scoreboard"></div>
+  <button class="mute-btn" id="muteBtn" title="Mute sound">🔊</button>
+</header>
+
+<div class="tide-gauge">
+  <div class="tide-label">the tide is bringing in</div>
+  <div class="tide-rank" id="tideRankDisplay">A</div>
+  <div class="tide-note" id="tideNote">Any card of this rank wins the trick outright.</div>
 </div>
 
-<!-- ===================== GAME ===================== -->
-<div class="screen" id="gameScreen">
-  <canvas id="stage"></canvas>
-  <div id="hud">
-    <div class="hud-left">
-      <div class="hud-block"><div class="hud-label">Level</div><div class="hud-value" id="hudLevelName">-</div></div>
-      <div class="hud-block" id="hudTimerBlock" style="display:none;"><div class="hud-label">Time</div><div class="hud-value" id="hudTimer">--</div></div>
-      <div class="hud-block" id="hudObjectiveBlock" style="display:none;"><div class="hud-label">Objective</div><div class="hud-value" id="hudObjective">-</div></div>
-    </div>
-    <div class="hud-right">
-      <button id="exitBtn">✕ Exit</button>
-    </div>
+<div class="bid-tracker" id="bidTracker"></div>
+
+<div class="table-wrap">
+  <div class="table" id="table">
+    <div class="seat west" id="seat-west"><div class="cardback-row" id="cards-west"></div><div class="name" id="seatname-west">West</div></div>
+    <div class="seat north" id="seat-north"><div class="name" id="seatname-north">North</div><div class="cardback-row" id="cards-north"></div></div>
+    <div class="seat east" id="seat-east"><div class="cardback-row" id="cards-east"></div><div class="name" id="seatname-east">East</div></div>
+    <div class="trick-zone" id="trickZone"></div>
+    <div class="deal-fx" id="dealFx"></div>
   </div>
 </div>
 
-<!-- ===================== PERMISSION OVERLAY ===================== -->
-<div id="permOverlay">
-  <div class="marble-preview"></div>
-  <h1>Tilt Marble</h1>
-  <p>Hold your phone flat. Tilt it to roll the marble — tilt the other way to slow, stop, or reverse it.</p>
-  <button class="primary" id="startBtn">Enable Tilt Controls</button>
-  <div id="permStatus"></div>
+<div class="status-bar" id="statusBar">Dealing...</div>
+
+<div class="hand-wrap" id="handWrap">
+  <div class="hand" id="hand"></div>
 </div>
 
-<!-- ===================== WIN / FAIL OVERLAY ===================== -->
-<div id="resultOverlay" class="hidden">
-  <div id="resultIcon">🏁</div>
-  <h2 id="resultTitle">Level Complete</h2>
-  <p id="resultMessage"></p>
-  <div class="btnRow">
-    <button class="secondary" id="resultRetry">Retry</button>
-    <button class="secondary" id="resultMenu">Level Select</button>
-    <button class="primary" id="resultNext" style="display:none;">Next Level</button>
+<footer>Trick 0 / 13 &nbsp;·&nbsp; first to 21 points wins the game</footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal modal-wide">
+    <div class="modal-scroll">
+      <div class="modal-eyebrow">Trick-taking · 4 players</div>
+      <h2>Riptide</h2>
+      <p class="modal-intro">You against three currents. No partnerships — just your cards, your nerve, and the tide.</p>
+
+      <div class="rule-list">
+        <div class="rule-item">
+          <div class="rule-icon">🎯</div>
+          <div class="rule-copy">
+            <div class="rule-title">Bid your tricks</div>
+            <div class="rule-desc">Once your hand is dealt, predict how many of the 13 tricks you'll win. Closest to your bid <b>without going over</b> earns a <b>+3 point</b> bonus at hand's end.</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">♠</div>
+          <div class="rule-copy">
+            <div class="rule-title">Follow suit</div>
+            <div class="rule-desc">Highest card of the suit led wins the trick — unless the tide turns.</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">🌊</div>
+          <div class="rule-copy">
+            <div class="rule-title">The tide turns</div>
+            <div class="rule-desc">Every trick has a secret rank, shuffled fresh each hand and revealed only when the trick begins. Any card of that rank <b>wins outright</b>, no matter what was led.</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">↺</div>
+          <div class="rule-copy">
+            <div class="rule-title">Washout</div>
+            <div class="rule-desc">A second tide card played in the same trick cancels the first — the tide washes out and the trick reverts to normal rules.</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">★</div>
+          <div class="rule-copy">
+            <div class="rule-title">Scoring</div>
+            <div class="rule-desc"><b>1 point</b> for a normal trick, <b>2 points</b> if you win it with the tide card. First to <b>21</b> wins.</div>
+          </div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-icon">➜</div>
+          <div class="rule-copy">
+            <div class="rule-title">Leading the next hand</div>
+            <div class="rule-desc">Whoever wins the most tricks in a hand leads the next one — an edge worth playing for.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="primary" id="startBtn">Deal me in</button>
+  </div>
+</div>
+
+<div class="overlay hidden bid-overlay-backdrop" id="bidOverlay">
+  <div class="modal modal-wide">
+    <div class="modal-scroll">
+      <div class="modal-eyebrow">Hand <span id="bidHandNumber">1</span> · Bidding</div>
+      <h2>How many tricks will you take?</h2>
+      <p class="modal-intro">Cards are dealt. Predict your trick count for this hand — closest to your bid <b>without going over</b> earns a bonus.</p>
+      <div class="bid-stepper">
+        <button class="bid-step-btn" id="bidMinus" type="button">−</button>
+        <div class="bid-value" id="bidValue">3</div>
+        <button class="bid-step-btn" id="bidPlus" type="button">+</button>
+      </div>
+    </div>
+    <button class="primary" id="lockBidBtn">Lock in bid</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="bidSummaryOverlay">
+  <div class="modal modal-wide">
+    <div class="modal-scroll">
+      <div class="modal-eyebrow">Hand <span id="bidSummaryHandNumber">1</span> · Bids locked in</div>
+      <h2>Everyone's called their number</h2>
+      <p class="modal-intro">Closest to your own bid without going over wins a +3 bonus at hand's end.</p>
+      <div class="results-table" id="bidSummaryTable"></div>
+    </div>
+    <button class="primary" id="startHandBtn">Start the hand</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="roundOverlay">
+  <div class="modal modal-wide">
+    <div class="modal-scroll">
+      <div class="modal-eyebrow">Hand <span id="roundNumber">1</span> complete</div>
+      <h2 id="roundTitle">Hand complete</h2>
+      <p class="modal-intro" id="roundSubtitle"></p>
+      <div class="results-table" id="resultsTable"></div>
+      <div class="progress-block" id="progressTrack"></div>
+    </div>
+    <button class="primary" id="nextRoundBtn">Deal next hand</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="gameOverOverlay">
+  <div class="modal modal-wide">
+    <div class="modal-scroll">
+      <div class="modal-eyebrow">Game over</div>
+      <h2 id="gameOverTitle">Game over</h2>
+      <p class="modal-intro" id="gameOverSubtitle"></p>
+      <div class="results-table" id="gameOverResultsTable"></div>
+    </div>
+    <button class="primary" id="restartBtn">Play again</button>
   </div>
 </div>
 
 <script>
-(function () {
-"use strict";
+(function(){
+  const SUITS = ['S','H','D','C'];
+  const SUIT_SYMBOL = { S:'♠', H:'♥', D:'♦', C:'♣' };
+  const RANK_LABEL = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K'};
 
-/* =====================================================================
-   CATEGORY METADATA — default suggested order, player can pick any
-   ===================================================================== */
-const CATEGORIES = [
-  { id: 'edge',     order: 1, icon: '🪨', name: 'Edge & Boundary',      desc: 'Stay on the platform. Falling off is failure.' },
-  { id: 'maze',     order: 2, icon: '🧭', name: 'Maze & Precision',     desc: 'Navigate corridors and gates with careful control.' },
-  { id: 'incline',  order: 3, icon: '⛰️', name: 'Incline & Elevation',  desc: 'Fight a constant pull while climbing toward the goal.' },
-  { id: 'momentum', order: 4, icon: '💥', name: 'Momentum & Collision', desc: 'Build speed deliberately to knock down or push things.' },
-  { id: 'switch',   order: 5, icon: '🔑', name: 'Switch & Puzzle',      desc: 'Trigger switches and plates to open a path forward.' },
-  { id: 'timing',   order: 6, icon: '⏱️', name: 'Timing & Hazards',     desc: 'Race rising floods and timed gates before they close.' },
-  { id: 'hazard',   order: 7, icon: '👾', name: 'Enemy & Dodging',      desc: 'Avoid patrols, turrets, and a marble that hunts you.' },
-];
+  const PLAYERS = [
+    { id:0, name:'You', seat:'you', isHuman:true },
+    { id:1, name:'West', seat:'west', isHuman:false },
+    { id:2, name:'North', seat:'north', isHuman:false },
+    { id:3, name:'East', seat:'east', isHuman:false },
+  ];
+  const TARGET_SCORE = 21;
+  const BID_BONUS = 3; // awarded for closest-without-going-over trick bid each hand
 
-/* =====================================================================
-   LEVEL DATA
-   Grid legend: # wall | . floor | (space) void/hole | S start | G goal
-   I ice (low friction) | C crumble (decays after touch) | B breakable wall
-   P pin | O pushable target ball | K pocket | W pressure plate
-   1-9 switch | A-I door | > < one-way gate (only passable in that dir)
-   ===================================================================== */
-const COLS = 9, ROWS = 11;
-
-const LEVELS = [
-  /* ---------------- EDGE & BOUNDARY ---------------- */
-  { id:'edge1', category:'edge', tier:1, name:'Wide Plateau', stars:1,
-    desc:'One hole in an otherwise generous platform.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#..   ..#",
-      "#..   ..#",
-      "#..   ..#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"] },
-
-  { id:'edge2', category:'edge', tier:2, name:'The Isthmus', stars:2,
-    desc:'A narrow bridge with drop-offs on both sides.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#  ...  #",
-      "#  ...  #",
-      "#  ...  #",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"] },
-
-  { id:'edge3', category:'edge', tier:3, name:'Crumbling Causeway', stars:3,
-    desc:'The path decays behind you. No going back.',
-    grid:[
-      "#########",
-      "#S      #",
-      "#C      #",
-      "#CCCC   #",
-      "#   C   #",
-      "#   C   #",
-      "#   CCCC#",
-      "#      G#",
-      "#       #",
-      "#       #",
-      "#########"] },
-
-  /* ---------------- MAZE & PRECISION ---------------- */
-  { id:'maze1', category:'maze', tier:1, name:'First Turns', stars:1,
-    desc:'Wide corridors, a couple of gentle turns.',
-    grid:[
-      "#########",
-      "#S..#...#",
-      "#..##...#",
-      "#.......#",
-      "#...##..#",
-      "#.......#",
-      "#..##...#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"] },
-
-  { id:'maze2', category:'maze', tier:2, name:'Groove Run', stars:2,
-    desc:'Single-width corridors. One path dead-ends.',
-    grid:[
-      "#########",
-      "#S#######",
-      "#.##....#",
-      "#..#.##.#",
-      "#....##.#",
-      "#####...#",
-      "#####.###",
-      "#####...#",
-      "#######.#",
-      "#######G#",
-      "#########"] },
-
-  { id:'maze3', category:'maze', tier:3, name:'One-Way Gauntlet', stars:3,
-    desc:'Directional gates: cross the wrong way and you bounce back.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#..>....#",
-      "#.......#",
-      "#.......#",
-      "#....<..#",
-      "#.......#",
-      "#......G#",
-      "#########"] },
-
-  /* ---------------- INCLINE & ELEVATION ---------------- */
-  { id:'incline1', category:'incline', tier:1, name:'Gentle Slope', stars:1,
-    desc:'A steady pull rolls you back — keep tilting to climb.',
-    grid:[
-      "#########",
-      "#......G#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#S......#",
-      "#########"],
-    forceZones:[{ x1:1,y1:1,x2:7,y2:9, dir:{x:0,y:1}, strength:210 }] },
-
-  { id:'incline2', category:'incline', tier:2, name:'Switchback', stars:2,
-    desc:'The pull alternates side to side. Correct, then correct again.',
-    grid:[
-      "#########",
-      "#....G..#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#S......#",
-      "#########"],
-    forceZones:[
-      { x1:1,y1:1,x2:4,y2:5, dir:{x:1,y:1}, strength:190 },
-      { x1:5,y1:1,x2:7,y2:5, dir:{x:-1,y:1}, strength:190 },
-      { x1:1,y1:6,x2:7,y2:9, dir:{x:0,y:1}, strength:190 }
-    ] },
-
-  { id:'incline3', category:'incline', tier:3, name:'The Bowl', stars:3,
-    desc:'Gravity pulls toward the center. The goal sits on the rim.',
-    grid:[
-      "#########",
-      "#...G...#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#...S...#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#########"],
-    forceZones:[{ radial:true, cx:4, cy:5, strength:230 }] },
-
-  /* ---------------- MOMENTUM & COLLISION ---------------- */
-  { id:'momentum1', category:'momentum', tier:1, name:'First Pins', stars:1,
-    desc:'Knock down every pin with a solid hit before the goal unlocks.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#..P.P..#",
-      "#.......#",
-      "#...P...#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"],
-    requireAllPinsDown:true },
-
-  { id:'momentum2', category:'momentum', tier:2, name:'Glass Wall', stars:2,
-    desc:'Smash through the breakable wall, or take the long way around.',
-    grid:[
-      "#########",
-      "#S..#...#",
-      "#...#...#",
-      "#...B...#",
-      "#...#...#",
-      "#...#...#",
-      "#...#...#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"] },
-
-  { id:'momentum3', category:'momentum', tier:3, name:'Billiard Puzzle', stars:3,
-    desc:'Push the heavy ball into the pocket. Your own position doesn\'t matter.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#...O...#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......K#",
-      "#########"],
-    winType:'pocket' },
-
-  /* ---------------- SWITCH & PUZZLE ---------------- */
-  { id:'switch1', category:'switch', tier:1, name:'Single Key', stars:1,
-    desc:'Trigger the switch to open the door ahead.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#...1...#",
-      "#.......#",
-      "#.......#",
-      "#...#...#",
-      "#...A...#",
-      "#...#...#",
-      "#......G#",
-      "#########"],
-    switches:[{ id:1, col:4, row:3, doors:['A'] }],
-    doors:[{ id:'A', col:4, row:7 }] },
-
-  { id:'switch2', category:'switch', tier:2, name:'In Order', stars:2,
-    desc:'Hit the switches 1, 2, 3 in order. Out of order resets them all.',
-    grid:[
-      "#########",
-      "#S.1....#",
-      "#.......#",
-      "#.......#",
-      "#......2#",
-      "#.......#",
-      "#.......#",
-      "#3......#",
-      "#######A#",
-      "#......G#",
-      "#########"],
-    switches:[
-      { id:1, col:3, row:1, doors:['A'] },
-      { id:2, col:7, row:4, doors:['A'] },
-      { id:3, col:1, row:7, doors:['A'] }
-    ],
-    doors:[{ id:'A', col:7, row:8 }],
-    sequenceMode:true },
-
-  { id:'switch3', category:'switch', tier:3, name:'Weight and Wait', stars:3,
-    desc:'Push the block onto the plate to hold the door open, then get through yourself.',
-    grid:[
-      "#########",
-      "#S...H..#",
-      "#.......#",
-      "#.......#",
-      "#..W....#",
-      "#.......#",
-      "#######A#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"],
-    doors:[{ id:'A', col:7, row:6 }],
-    plate:{ col:3, row:4, doors:['A'] },
-    heavyBlocks:[{ col:5, row:1 }] },
-
-  /* ---------------- TIMING & ENVIRONMENTAL ---------------- */
-  { id:'timing1', category:'timing', tier:1, name:'Rising Tide', stars:1,
-    desc:'The water rises from below. Keep moving toward higher ground.',
-    grid:[
-      "#########",
-      "#.....G.#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#S......#",
-      "#########"],
-    flood:{ theme:'water', interval:3.0, rows:[9,8,7,6] } },
-
-  { id:'timing2', category:'timing', tier:2, name:'Drawbridges', stars:2,
-    desc:'Two gates open on offset timers. Watch the cycle before you commit.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#T#####T#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"],
-    timedDoors:[
-      { col:1, row:4, period:4, openDuration:1.6, phase:0 },
-      { col:7, row:4, period:4, openDuration:1.6, phase:2 }
-    ] },
-
-  { id:'timing3', category:'timing', tier:3, name:'Ice and Fire', stars:3,
-    desc:'Lava rises fast, and the floor near the goal barely has any grip.',
-    grid:[
-      "#########",
-      "#IIIIIIG#",
-      "#IIIIIII#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#S......#",
-      "#########"],
-    flood:{ theme:'lava', interval:2.2, rows:[9,8,7,6,5] } },
-
-  /* ---------------- ENEMY & HAZARD DODGING ---------------- */
-  { id:'hazard1', category:'hazard', tier:1, name:'Sweepers', stars:1,
-    desc:'Two hazards sweep back and forth on fixed lines.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"],
-    hazards:[
-      { type:'patrol', axis:'x', row:3.5, from:1, to:7, speed:2.1, size:0.42 },
-      { type:'patrol', axis:'x', row:6.5, from:7, to:1, speed:2.6, size:0.42 }
-    ] },
-
-  { id:'hazard2', category:'hazard', tier2:2, tier:2, name:'Crossfire', stars:2,
-    desc:'Horizontal and vertical patrols overlap, plus a turret.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"],
-    hazards:[
-      { type:'patrol', axis:'x', row:3, from:1, to:7, speed:2.4, size:0.4 },
-      { type:'patrol', axis:'y', col:4.5, from:1, to:9, speed:2.0, size:0.4 },
-      { type:'turret', col:1, row:1, dir:{x:1,y:0}, interval:2.2, projSpeed:3.4, size:0.3 }
-    ] },
-
-  { id:'hazard3', category:'hazard', tier:3, name:'The Hunter', stars:3,
-    desc:'Something with your exact same physics is now hunting you.',
-    grid:[
-      "#########",
-      "#S......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#.......#",
-      "#......G#",
-      "#########"],
-    hazards:[
-      { type:'hunter', col:7, row:9, speed:145, size:0.42 },
-      { type:'patrol', axis:'x', row:5, from:2, to:6, speed:1.6, size:0.35 }
-    ] },
-];
-
-/* =====================================================================
-   PHYSICS CONSTANTS
-   ===================================================================== */
-const SENSITIVITY = 620;
-const MAX_TILT_DEG = 35;
-const FRICTION = 0.86;
-const RESTITUTION = 0.5;
-const DEADZONE_DEG = 1.5;
-const TOPPLE_SPEED = 90;      // px/s needed to knock down a pin
-const BREAK_SPEED = 110;      // px/s needed to damage a breakable wall
-const BLOCK_PUSH_SPEED = 40;  // px/s needed to move a heavy block
-
-/* =====================================================================
-   DOM refs
-   ===================================================================== */
-const screens = {
-  menu: document.getElementById('menuScreen'),
-  levelSelect: document.getElementById('levelSelectScreen'),
-  game: document.getElementById('gameScreen'),
-};
-function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.remove('active'));
-  screens[name].classList.add('active');
-}
-
-const catGrid = document.getElementById('catGrid');
-const levelList = document.getElementById('levelList');
-const levelSelectTitle = document.getElementById('levelSelectTitle');
-const levelSelectDesc = document.getElementById('levelSelectDesc');
-
-const canvas = document.getElementById('stage');
-const ctx = canvas.getContext('2d');
-const hudLevelName = document.getElementById('hudLevelName');
-const hudTimerBlock = document.getElementById('hudTimerBlock');
-const hudTimer = document.getElementById('hudTimer');
-const hudObjectiveBlock = document.getElementById('hudObjectiveBlock');
-const hudObjective = document.getElementById('hudObjective');
-
-const permOverlay = document.getElementById('permOverlay');
-const startBtn = document.getElementById('startBtn');
-const permStatus = document.getElementById('permStatus');
-
-const resultOverlay = document.getElementById('resultOverlay');
-const resultIcon = document.getElementById('resultIcon');
-const resultTitle = document.getElementById('resultTitle');
-const resultMessage = document.getElementById('resultMessage');
-const resultRetry = document.getElementById('resultRetry');
-const resultMenu = document.getElementById('resultMenu');
-const resultNext = document.getElementById('resultNext');
-
-/* =====================================================================
-   BUILD MENU UI
-   ===================================================================== */
-const orderedCats = CATEGORIES.slice().sort((a,b) => a.order - b.order);
-
-orderedCats.forEach(cat => {
-  const card = document.createElement('button');
-  card.className = 'catCard';
-  const levels = LEVELS.filter(l => l.category === cat.id);
-  card.innerHTML = `
-    <div class="catIcon">${cat.icon}</div>
-    <div class="catInfo">
-      <div class="catOrder">SUGGESTED ${cat.order} OF ${orderedCats.length}</div>
-      <div class="catName">${cat.name}</div>
-      <div class="catDesc">${cat.desc}</div>
-      <div class="catStars">${levels.length} levels</div>
-    </div>`;
-  card.addEventListener('click', () => openLevelSelect(cat));
-  catGrid.appendChild(card);
-});
-
-function openLevelSelect(cat) {
-  levelSelectTitle.textContent = cat.name;
-  levelSelectDesc.textContent = cat.desc;
-  levelList.innerHTML = '';
-  const levels = LEVELS.filter(l => l.category === cat.id).sort((a,b)=>a.tier-b.tier);
-  levels.forEach(lvl => {
-    const card = document.createElement('button');
-    card.className = 'levelCard';
-    card.innerHTML = `
-      <div class="levelTier">${lvl.tier}</div>
-      <div class="levelInfo">
-        <div class="levelName">${lvl.name}</div>
-        <div class="levelDiff">${lvl.desc}</div>
-      </div>
-      <div class="levelStars">${'★'.repeat(lvl.stars)}${'☆'.repeat(3-lvl.stars)}</div>`;
-    card.addEventListener('click', () => startLevel(lvl.id));
-    levelList.appendChild(card);
-  });
-  showScreen('levelSelect');
-}
-
-document.getElementById('levelSelectBack').addEventListener('click', () => showScreen('menu'));
-
-/* =====================================================================
-   CANVAS SIZING
-   ===================================================================== */
-let W, H, DPR, cellSize, offsetX, offsetY;
-function resize() {
-  DPR = window.devicePixelRatio || 1;
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width = W * DPR;
-  canvas.height = H * DPR;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  cellSize = Math.min(W / COLS, H / ROWS);
-  offsetX = (W - cellSize * COLS) / 2;
-  offsetY = (H - cellSize * ROWS) / 2;
-}
-window.addEventListener('resize', resize);
-resize();
-
-function toPx(col, row) { return { x: offsetX + col * cellSize, y: offsetY + row * cellSize }; }
-function cellOf(x, y) { return { col: Math.floor((x - offsetX) / cellSize), row: Math.floor((y - offsetY) / cellSize) }; }
-
-/* =====================================================================
-   TILT INPUT
-   ===================================================================== */
-let rawBeta = 0, rawGamma = 0, betaOffset = 0, gammaOffset = 0, eventsReceived = 0;
-function handleOrientation(e) {
-  if (e.beta === null || e.gamma === null) return;
-  eventsReceived++;
-  rawBeta = e.beta;
-  rawGamma = e.gamma;
-}
-function currentTilt() {
-  let beta = rawBeta - betaOffset;
-  let gamma = rawGamma - gammaOffset;
-  if (beta > 180) beta -= 360;
-  if (beta < -180) beta += 360;
-  return { beta, gamma };
-}
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-/* =====================================================================
-   GAME STATE
-   ===================================================================== */
-let level = null;
-let tiles = [];           // 2D array of chars, mutable copy of grid
-let marble = { x:0, y:0, vx:0, vy:0, r:0 };
-let pins = [];
-let breakableHp = {};      // key "col,row" -> hp
-let doorOpenState = {};    // door id -> bool
-let switchActive = {};     // switch id -> bool
-let sequenceProgress = 0;
-let plateWeighted = false;
-let heavyBlocks = [];
-let targetBall = null;
-let hazards = [];
-let projectiles = [];
-let crumbleTimers = {};    // key -> touchedAt time
-let floodElapsed = 0;
-let floodIndex = 0;
-let timedDoorsState = [];
-let elapsedTime = 0;
-let running = false;
-let gameOver = false;
-let lastTime = null;
-let fallAnim = null;       // {progress} when marble is falling into void
-
-function keyOf(col, row) { return col + ',' + row; }
-
-function loadLevel(lvl) {
-  level = lvl;
-  tiles = lvl.grid.map(row => row.split(''));
-  gameOver = false;
-  fallAnim = null;
-  elapsedTime = 0;
-  floodElapsed = 0;
-  floodIndex = 0;
-  sequenceProgress = 0;
-  switchActive = {};
-  doorOpenState = {};
-  breakableHp = {};
-  crumbleTimers = {};
-  plateWeighted = false;
-  pins = [];
-  heavyBlocks = [];
-  targetBall = null;
-  hazards = [];
-  projectiles = [];
-
-  let startCol = 1, startRow = 1;
-
-  for (let r = 0; r < tiles.length; r++) {
-    for (let c = 0; c < tiles[r].length; c++) {
-      const ch = tiles[r][c];
-      if (ch === 'S') { startCol = c; startRow = r; tiles[r][c] = '.'; }
-      else if (ch === 'P') { pins.push({ col:c, row:r, state:'up' }); tiles[r][c] = '.'; }
-      else if (ch === 'B') { breakableHp[keyOf(c,r)] = 2; }
-      else if (ch === 'O') { targetBall = { col:c, row:r }; tiles[r][c] = '.'; }
-      else if (ch === 'H') { heavyBlocks.push({ col:c, row:r }); tiles[r][c] = '.'; }
-      else if (ch === 'T') { /* timed door placeholder handled via level.timedDoors */ }
-    }
+  // "You" takes a base-form verb ("lead", "take") while everyone else takes the
+  // third-person singular ("leads", "takes") — these two helpers keep every status
+  // message grammatically correct without repeating the ternary everywhere.
+  function nameFor(idx){ return idx===0 ? 'You' : PLAYERS[idx].name; }
+  function verbFor(idx, thirdPerson){
+    if(idx===0){ return thirdPerson.endsWith('s') ? thirdPerson.slice(0,-1) : thirdPerson; }
+    return thirdPerson;
   }
 
-  (lvl.doors || []).forEach(d => { doorOpenState[d.id] = false; });
-  (lvl.switches || []).forEach(s => { switchActive[s.id] = false; });
-  (lvl.timedDoors || []).forEach(() => {});
-  timedDoorsState = (lvl.timedDoors || []).map(() => ({ open:false }));
+  const FUNNY_NAMES = [
+    'Salty Pete', 'Captain Kelp', 'Barnacle Bill', 'Reef Rick', 'Sandy Shores',
+    'Wavey Davey', 'Marina Trench', 'Buoy George', 'Chief Chum', 'Old Sea Dog',
+    'Anchor Annie', 'Tuna Turner', 'Sir Krillington', 'Pearl Diver Pat',
+    'Nauti Nancy', 'Deckhand Dale', 'Skipper Sal', 'Commodore Cod',
+    'Mussel Max', 'Longshore Lou', 'Riptide Rita', 'Undertow Ursula',
+  ];
 
-  (lvl.hazards || []).forEach(hz => {
-    hazards.push(Object.assign({}, hz, {
-      x: (hz.col !== undefined ? hz.col : hz.from) * 1,
-      y: (hz.row !== undefined ? hz.row : hz.from) * 1,
-      dirSign: 1,
-      cooldown: 0
-    }));
-  });
-
-  const startPx = toPx(startCol + 0.5, startRow + 0.5);
-  marble.x = startPx.x; marble.y = startPx.y;
-  marble.vx = 0; marble.vy = 0;
-  marble.r = cellSize * 0.30;
-
-  betaOffset = rawBeta; gammaOffset = rawGamma; // auto-recenter on level load
-
-  updateHud();
-}
-
-function tileAt(col, row) {
-  if (row < 0 || row >= tiles.length || col < 0 || col >= tiles[row].length) return '#';
-  return tiles[row][col];
-}
-function setTile(col, row, ch) { if (tiles[row]) tiles[row][col] = ch; }
-
-function isDoorChar(ch) { return level.doors && level.doors.some(d => d.id === ch); }
-function doorAt(col, row) {
-  if (!level.doors) return null;
-  return level.doors.find(d => d.col === col && d.row === row) || null;
-}
-function isSolidTile(ch, col, row) {
-  if (ch === '#') return true;
-  if (ch === 'B') return (breakableHp[keyOf(col,row)] || 0) > 0;
-  const door = doorAt(col, row);
-  if (door) return !doorOpenState[door.id];
-  return false;
-}
-
-/* =====================================================================
-   PHYSICS STEP
-   ===================================================================== */
-function step(dt) {
-  elapsedTime += dt;
-
-  // --- Tilt-based acceleration ---
-  const { beta, gamma } = currentTilt();
-  let b = Math.abs(beta) < DEADZONE_DEG ? 0 : beta;
-  let g = Math.abs(gamma) < DEADZONE_DEG ? 0 : gamma;
-  const gx = clamp(g / MAX_TILT_DEG, -1, 1);
-  const gy = clamp(b / MAX_TILT_DEG, -1, 1);
-  let ax = gx * SENSITIVITY;
-  let ay = gy * SENSITIVITY;
-
-  // --- Force zones (inclines) ---
-  const mCell = { col: (marble.x - offsetX) / cellSize, row: (marble.y - offsetY) / cellSize };
-  (level.forceZones || []).forEach(z => {
-    if (z.radial) {
-      const dx = z.cx - mCell.col, dy = z.cy - mCell.row;
-      const dist = Math.hypot(dx, dy) || 0.001;
-      ax += (dx / dist) * z.strength;
-      ay += (dy / dist) * z.strength;
-    } else if (mCell.col >= z.x1 && mCell.col <= z.x2 && mCell.row >= z.y1 && mCell.row <= z.y2) {
-      const len = Math.hypot(z.dir.x, z.dir.y) || 1;
-      ax += (z.dir.x / len) * z.strength;
-      ay += (z.dir.y / len) * z.strength;
-    }
-  });
-
-  marble.vx += ax * dt;
-  marble.vy += ay * dt;
-
-  // --- Friction (tile-dependent) ---
-  const curTile = tileAt(Math.floor(mCell.col), Math.floor(mCell.row));
-  let frictionBase = FRICTION;
-  if (curTile === 'I') frictionBase = 0.985;   // ice: barely any friction
-  const damp = Math.pow(frictionBase, dt);
-  marble.vx *= damp;
-  marble.vy *= damp;
-
-  marble.x += marble.vx * dt;
-  marble.y += marble.vy * dt;
-
-  // --- Collisions with grid ---
-  resolveGridCollisions(marble, dt);
-
-  // --- Crumble tiles ---
-  const curCol = Math.floor(mCell.col), curRow = Math.floor(mCell.row);
-  if (tileAt(curCol, curRow) === 'C') {
-    const key = keyOf(curCol, curRow);
-    if (!crumbleTimers[key]) crumbleTimers[key] = elapsedTime;
-    if (elapsedTime - crumbleTimers[key] > 0.4) setTile(curCol, curRow, ' ');
+  function assignAINames(){
+    const pool = FUNNY_NAMES.slice();
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    const [n1,n2,n3] = pool;
+    PLAYERS[1].name = n1;
+    PLAYERS[2].name = n2;
+    PLAYERS[3].name = n3;
+    const west = document.getElementById('seatname-west');
+    const north = document.getElementById('seatname-north');
+    const east = document.getElementById('seatname-east');
+    if(west) west.textContent = n1;
+    if(north) north.textContent = n2;
+    if(east) east.textContent = n3;
   }
 
-  // --- Pins ---
-  pins.forEach(p => {
-    if (p.state === 'down') return;
-    const px = toPx(p.col + 0.5, p.row + 0.5);
-    const dx = marble.x - px.x, dy = marble.y - px.y;
-    const dist = Math.hypot(dx, dy);
-    const pr = cellSize * 0.28;
-    if (dist < marble.r + pr) {
-      const speed = Math.hypot(marble.vx, marble.vy);
-      if (speed > TOPPLE_SPEED) {
-        p.state = 'down';
-      } else {
-        const nx = dx / (dist || 1), ny = dy / (dist || 1);
-        const overlap = (marble.r + pr) - dist;
-        marble.x += nx * overlap; marble.y += ny * overlap;
-        const vn = marble.vx * nx + marble.vy * ny;
-        marble.vx -= 2 * vn * nx * RESTITUTION;
-        marble.vy -= 2 * vn * ny * RESTITUTION;
+  // ---------------- Sound engine (synthesized, no audio files) ----------------
+  const SFX = (function(){
+    let ctx=null, masterGain=null, muted=false, ambienceSrc=null, ambienceGain=null;
+    function ensureCtx(){
+      if(!ctx){
+        ctx = new (window.AudioContext||window.webkitAudioContext)();
+        masterGain = ctx.createGain();
+        masterGain.gain.value = 0.85;
+        masterGain.connect(ctx.destination);
       }
+      if(ctx.state==='suspended') ctx.resume();
+      return ctx;
     }
-  });
-
-  // --- Breakable walls (damage on hit) ---
-  Object.keys(breakableHp).forEach(key => {
-    if (breakableHp[key] <= 0) return;
-    const [c, r] = key.split(',').map(Number);
-    const cellPx = toPx(c, r);
-    const cx = cellPx.x + cellSize/2, cy = cellPx.y + cellSize/2;
-    const dx = marble.x - cx, dy = marble.y - cy;
-    if (Math.abs(dx) < cellSize/2 + marble.r && Math.abs(dy) < cellSize/2 + marble.r) {
-      const speed = Math.hypot(marble.vx, marble.vy);
-      if (speed > BREAK_SPEED && !breakableHp['_cool_' + key]) {
-        breakableHp[key] -= 1;
-        breakableHp['_cool_' + key] = 1;
-        if (breakableHp[key] <= 0) setTile(c, r, '.');
+    function tone(freq, dur, opts={}){
+      if(muted) return;
+      const c = ensureCtx();
+      const t0 = c.currentTime + (opts.delay||0);
+      const osc = c.createOscillator();
+      osc.type = opts.type||'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if(opts.freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(opts.freqEnd,1), t0+dur);
+      const g = c.createGain();
+      const vol = opts.volume!=null?opts.volume:0.18;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol, t0+0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t0); osc.stop(t0+dur+0.03);
+    }
+    function noiseBurst(dur, opts={}){
+      if(muted) return;
+      const c = ensureCtx();
+      const t0 = c.currentTime + (opts.delay||0);
+      const bufferSize = Math.max(1, Math.floor(c.sampleRate*dur));
+      const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      const filter = c.createBiquadFilter();
+      filter.type = opts.filterType||'bandpass';
+      filter.frequency.value = opts.filterFreq||2500;
+      filter.Q.value = opts.Q!=null?opts.Q:0.8;
+      const g = c.createGain();
+      g.gain.value = opts.volume!=null?opts.volume:0.14;
+      src.connect(filter); filter.connect(g); g.connect(masterGain);
+      src.start(t0);
+    }
+    return {
+      setMuted(v){
+        muted = v;
+        if(ambienceGain) ambienceGain.gain.setTargetAtTime(v?0:0.03, ensureCtx().currentTime, 0.4);
+      },
+      isMuted(){ return muted; },
+      unlock(){ ensureCtx(); },
+      cardPlay(){ noiseBurst(0.07,{filterFreq:3400,volume:0.1,filterType:'highpass'}); tone(560,0.05,{type:'triangle',volume:0.05,delay:0.015}); },
+      shuffleTick(){ noiseBurst(0.06,{filterFreq:1600+Math.random()*1400,volume:0.08,filterType:'bandpass'}); },
+      dealTick(){ noiseBurst(0.045,{filterFreq:3800,volume:0.05,filterType:'bandpass'}); },
+      tideReveal(){ tone(220,0.5,{type:'sine',freqEnd:440,volume:0.11}); tone(330,0.45,{type:'sine',freqEnd:660,volume:0.07,delay:0.05}); },
+      trickWin(){ [523.25,659.25,783.99].forEach((f,i)=>tone(f,0.22,{type:'sine',volume:0.09,delay:i*0.06})); },
+      riptideWin(){ [392,523.25,659.25,880].forEach((f,i)=>tone(f,0.3,{type:'triangle',volume:0.13,delay:i*0.05})); tone(80,0.4,{type:'sine',volume:0.16}); },
+      washout(){ tone(500,0.35,{type:'sine',freqEnd:110,volume:0.12}); noiseBurst(0.3,{filterFreq:800,volume:0.07,filterType:'lowpass'}); },
+      roundEnd(){ [440,554.37,659.25,880].forEach((f,i)=>tone(f,0.25,{type:'triangle',volume:0.09,delay:i*0.08})); },
+      bidBonus(){ [660,880,1046.5].forEach((f,i)=>tone(f,0.26,{type:'sine',volume:0.13,delay:i*0.09})); },
+      gameWin(){ [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,0.35,{type:'triangle',volume:0.15,delay:i*0.11})); },
+      gameLose(){ [392,349.23,293.66,220].forEach((f,i)=>tone(f,0.42,{type:'sine',volume:0.11,delay:i*0.16})); },
+      click(){ tone(700,0.05,{type:'square',volume:0.04}); },
+      startAmbience(){
+        const c = ensureCtx();
+        if(ambienceSrc) return;
+        const bufferSize = c.sampleRate*4;
+        const buffer = c.createBuffer(1,bufferSize,c.sampleRate);
+        const data = buffer.getChannelData(0);
+        let last=0;
+        for(let i=0;i<bufferSize;i++){ const white=Math.random()*2-1; data[i]=(last+0.02*white)/1.02; last=data[i]; data[i]*=3.2; }
+        const src = c.createBufferSource();
+        src.buffer=buffer; src.loop=true;
+        const filter = c.createBiquadFilter();
+        filter.type='lowpass'; filter.frequency.value=450;
+        ambienceGain = c.createGain();
+        ambienceGain.gain.value = muted?0:0.03;
+        src.connect(filter); filter.connect(ambienceGain); ambienceGain.connect(masterGain);
+        src.start();
+        ambienceSrc = src;
       }
-    } else {
-      breakableHp['_cool_' + key] = 0;
-    }
-  });
+    };
+  })();
 
-  // --- Heavy blocks / target ball ---
-  const allBlocks = heavyBlocks.concat(targetBall ? [targetBall] : []);
-  allBlocks.forEach(blk => {
-    const bp = toPx(blk.col + 0.5, blk.row + 0.5);
-    if (blk._px === undefined) { blk._px = bp.x; blk._py = bp.y; blk._vx = 0; blk._vy = 0; }
-    const dx = blk._px - marble.x, dy = blk._py - marble.y;
-    const dist = Math.hypot(dx, dy);
-    const br = cellSize * 0.3;
-    if (dist < marble.r + br) {
-      const speed = Math.hypot(marble.vx, marble.vy);
-      const nx = dx / (dist || 1), ny = dy / (dist || 1);
-      const overlap = (marble.r + br) - dist;
-      blk._px += nx * overlap * 0.6; blk._py += ny * overlap * 0.6;
-      marble.x -= nx * overlap * 0.4; marble.y -= ny * overlap * 0.4;
-      if (speed > BLOCK_PUSH_SPEED) {
-        blk._vx += nx * speed * 0.5;
-        blk._vy += ny * speed * 0.5;
-        marble.vx *= 0.5; marble.vy *= 0.5;
-      }
-    }
-    blk._vx *= Math.pow(0.9, dt * 60);
-    blk._vy *= Math.pow(0.9, dt * 60);
-    blk._px += blk._vx * dt;
-    blk._py += blk._vy * dt;
-    resolveGridCollisionsGeneric(blk, cellSize * 0.3, dt, true);
-    blk.col = (blk._px - offsetX) / cellSize - 0.5;
-    blk.row = (blk._py - offsetY) / cellSize - 0.5;
-  });
+  let state = null;
 
-  // --- Hazards ---
-  updateHazards(dt);
-  projectiles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; });
-  projectiles = projectiles.filter(p => {
-    const c = cellOf(p.x, p.y);
-    return c.col >= 0 && c.col < COLS && c.row >= 0 && c.row < ROWS;
-  });
-
-  // hazard/projectile collision with marble
-  const allThreats = hazards.concat(projectiles);
-  for (const hz of allThreats) {
-    const hzPx = (hz.type === 'patrol' && hz.axis === 'y') ? toPx(hz.col, hz.y) :
-                 (hz.type) ? toPx(hz.x !== undefined ? hz.x : hz.col, hz.y !== undefined ? hz.y : hz.row) :
-                 { x: hz.x, y: hz.y };
-    const size = (hz.size || 0.35) * cellSize;
-    const dx = marble.x - hzPx.x, dy = marble.y - hzPx.y;
-    if (Math.hypot(dx, dy) < marble.r + size) {
-      triggerFail('hit', 'Something got you.');
-      return;
-    }
+  function freshDeck(){
+    const d = [];
+    for(const s of SUITS){ for(let r=1;r<=13;r++){ d.push({rank:r, suit:s}); } }
+    for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; }
+    return d;
   }
 
-  // --- Switches ---
-  (level.switches || []).forEach(sw => {
-    const swPx = toPx(sw.col + 0.5, sw.row + 0.5);
-    const dist = Math.hypot(marble.x - swPx.x, marble.y - swPx.y);
-    if (dist < marble.r + cellSize * 0.22 && !switchActive[sw.id]) {
-      if (level.sequenceMode) {
-        const order = level.switches.map(s => s.id);
-        const expected = order[sequenceProgress];
-        if (sw.id === expected) {
-          switchActive[sw.id] = true;
-          sequenceProgress++;
-          if (sequenceProgress >= order.length) {
-            sw.doors.forEach(d => doorOpenState[d] = true);
-          }
-        } else {
-          order.forEach(id => switchActive[id] = false);
-          sequenceProgress = 0;
-          Object.keys(doorOpenState).forEach(d => doorOpenState[d] = false);
-        }
-      } else {
-        switchActive[sw.id] = true;
-        sw.doors.forEach(d => doorOpenState[d] = true);
-      }
-    }
-  });
-
-  // --- Pressure plate ---
-  if (level.plate) {
-    const pp = level.plate;
-    const ppPx = toPx(pp.col + 0.5, pp.row + 0.5);
-    let weighted = Math.hypot(marble.x - ppPx.x, marble.y - ppPx.y) < cellSize * 0.4;
-    heavyBlocks.forEach(blk => {
-      if (Math.hypot(blk._px - ppPx.x, blk._py - ppPx.y) < cellSize * 0.4) weighted = true;
-    });
-    plateWeighted = weighted;
-    pp.doors.forEach(d => doorOpenState[d] = weighted);
+  function newGameState(){
+    return {
+      scores:[0,0,0,0],
+      round:0,
+      hands:[[],[],[],[]],
+      trickNum:1,
+      tideSequence:[],
+      tideRank:null,
+      tideRevealed:false,
+      ledSuit:null,
+      trick:[], // {player, card}
+      currentPlayer:0,
+      leader:0,
+      log:'',
+      locked:false,
+      tricksThisRound:[0,0,0,0],
+      pointsThisRound:[0,0,0,0],
+      seenCards:[], // all cards played so far this round, for AI card-counting
+      revealHands:false,
+      justRevealed:false,
+      lastHandWinner:0, // who leads the next hand; defaults to You for the very first hand
+      bids:[null,null,null,null],
+      lastBidBonusIdx:-1,
+      dealProgress:[0,0,0,0],
+      cachedSuggestion:null,
+    };
   }
 
-  // --- Timed doors ---
-  (level.timedDoors || []).forEach((td, i) => {
-    const cyclePos = (elapsedTime + td.phase) % td.period;
-    timedDoorsState[i].open = cyclePos < td.openDuration;
-  });
-
-  // --- Flood ---
-  if (level.flood) {
-    floodElapsed += dt;
-    if (floodElapsed > level.flood.interval && floodIndex < level.flood.rows.length) {
-      floodElapsed = 0;
-      const r = level.flood.rows[floodIndex];
-      for (let c = 1; c < COLS - 1; c++) {
-        if (tileAt(c, r) !== '#' && tileAt(c,r) !== 'G' ) setTile(c, r, ' ');
-      }
-      floodIndex++;
-    }
+  function shuffledRankSequence(){
+    const seq = [];
+    for(let r=1;r<=13;r++) seq.push(r);
+    for(let i=seq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [seq[i],seq[j]]=[seq[j],seq[i]]; }
+    return seq;
   }
 
-  // --- Fall / void check ---
-  const cc = Math.floor(mCell.col), rr = Math.floor(mCell.row);
-  const underTile = tileAt(cc, rr);
-  if (underTile === ' ' && !fallAnim) {
-    triggerFail('fall', level.flood && level.flood.theme === 'lava' ? 'Swallowed by lava.' : 'You fell off the edge.');
-    return;
-  }
-
-  // --- Win check ---
-  checkWin();
-}
-
-function resolveGridCollisions(body, dt) {
-  resolveGridCollisionsGeneric(body, body.r, dt, false);
-}
-
-function resolveGridCollisionsGeneric(body, radius, dt, isBlock) {
-  const centerCell = cellOf(isBlock ? body._px : body.x, isBlock ? body._py : body.y);
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      const col = centerCell.col + dc, row = centerCell.row + dr;
-      const ch = tileAt(col, row);
-      let solid = isSolidTile(ch, col, row);
-      let oneWayBlock = false;
-      if (ch === '>' || ch === '<') {
-        // one-way: block if moving against the allowed direction while overlapping
-        const bvx = isBlock ? body._vx : body.vx;
-        const allowedSign = ch === '>' ? 1 : -1;
-        if (bvx * allowedSign < -5) oneWayBlock = true;
-      }
-      if (!solid && !oneWayBlock) continue;
-
-      const cellPx = toPx(col, row);
-      const left = cellPx.x, top = cellPx.y, right = left + cellSize, bottom = top + cellSize;
-      const bx = isBlock ? body._px : body.x, by = isBlock ? body._py : body.y;
-      const closestX = clamp(bx, left, right);
-      const closestY = clamp(by, top, bottom);
-      const dx = bx - closestX, dy = by - closestY;
-      const dist = Math.hypot(dx, dy);
-      if (dist < radius && dist > 0.0001) {
-        const overlap = radius - dist;
-        const nx = dx / dist, ny = dy / dist;
-        if (isBlock) {
-          body._px += nx * overlap; body._py += ny * overlap;
-          const vn = body._vx * nx + body._vy * ny;
-          if (vn < 0) { body._vx -= vn * nx * (1+RESTITUTION); body._vy -= vn * ny * (1+RESTITUTION); }
-        } else {
-          body.x += nx * overlap; body.y += ny * overlap;
-          const vn = body.vx * nx + body.vy * ny;
-          if (vn < 0) { body.vx -= vn * nx * (1+RESTITUTION); body.vy -= vn * ny * (1+RESTITUTION); }
-        }
-      } else if (dist === 0) {
-        // dead center overlap fallback
-        if (isBlock) { body._vx *= -RESTITUTION; body._vy *= -RESTITUTION; }
-        else { body.vx *= -RESTITUTION; body.vy *= -RESTITUTION; }
-      }
-    }
-  }
-}
-
-function updateHazards(dt) {
-  hazards.forEach(hz => {
-    if (hz.type === 'patrol') {
-      if (hz.axis === 'x') {
-        hz.x += hz.dirSign * hz.speed * dt;
-        if (hz.x > Math.max(hz.from, hz.to)) { hz.x = Math.max(hz.from, hz.to); hz.dirSign = -1; }
-        if (hz.x < Math.min(hz.from, hz.to)) { hz.x = Math.min(hz.from, hz.to); hz.dirSign = 1; }
-        hz.col = hz.x; hz.row = hz.row; hz.y = hz.row;
-      } else {
-        hz.y += hz.dirSign * hz.speed * dt;
-        if (hz.y > Math.max(hz.from, hz.to)) { hz.y = Math.max(hz.from, hz.to); hz.dirSign = -1; }
-        if (hz.y < Math.min(hz.from, hz.to)) { hz.y = Math.min(hz.from, hz.to); hz.dirSign = 1; }
-        hz.x = hz.col;
-      }
-    } else if (hz.type === 'hunter') {
-      const dx = marble.x - toPx(hz.x, hz.y).x;
-      const dy = marble.y - toPx(hz.x, hz.y).y;
-      const dist = Math.hypot(dx, dy) || 1;
-      hz.x += (dx/dist) * (hz.speed*dt)/cellSize;
-      hz.y += (dy/dist) * (hz.speed*dt)/cellSize;
-    } else if (hz.type === 'turret') {
-      hz.cooldown -= dt;
-      if (hz.cooldown <= 0) {
-        hz.cooldown = hz.interval;
-        const p = toPx(hz.col + 0.5, hz.row + 0.5);
-        projectiles.push({
-          x: p.x, y: p.y,
-          vx: hz.dir.x * hz.projSpeed * cellSize,
-          vy: hz.dir.y * hz.projSpeed * cellSize,
-          size: hz.size || 0.25
+  function startRound(){
+    const deck = freshDeck();
+    state.hands = [[],[],[],[]];
+    for(let i=0;i<52;i++){ state.hands[i%4].push(deck[i]); }
+    for(const h of state.hands){ h.sort(sortCards); }
+    state.trickNum = 1;
+    state.tideSequence = shuffledRankSequence();
+    state.tideRank = null;
+    state.tideRevealed = false;
+    state.ledSuit = null;
+    state.trick = [];
+    state.leader = state.lastHandWinner;
+    state.currentPlayer = state.leader;
+    state.tricksThisRound = [0,0,0,0];
+    state.pointsThisRound = [0,0,0,0];
+    state.seenCards = [];
+    state.revealHands = false;
+    state.bids = [null,null,null,null];
+    state.lastBidBonusIdx = -1;
+    state.round += 1;
+    render();
+    setStatus(`Shuffling for hand ${state.round}...`);
+    playShuffleAndDeal(state.leader, ()=>{
+      state.revealHands = true;
+      state.justRevealed = true;
+      render();
+      state.justRevealed = false;
+      setStatus(`Hand ${state.round} dealt.`);
+      showBidOverlay(()=>{
+        revealTideForTrick(()=>{
+          setStatus(`${nameFor(state.leader)} ${verbFor(state.leader,'leads')}.`);
+          maybeAdvanceAI();
         });
+      });
+    });
+  }
+
+  function seatFxPosition(seatKey){
+    switch(seatKey){
+      case 'you': return { left:'50%', top:'90%' };
+      case 'west': return { left:'10%', top:'50%' };
+      case 'north': return { left:'50%', top:'12%' };
+      case 'east': return { left:'90%', top:'50%' };
+    }
+  }
+
+  function playShuffleAndDeal(leaderIdx, callback){
+    const fx = document.getElementById('dealFx');
+    fx.innerHTML = '';
+    state.dealProgress = [0,0,0,0];
+    render();
+
+    const deck = document.createElement('div');
+    deck.className = 'deck-stack shuffling';
+    for(let i=0;i<6;i++){
+      const c = document.createElement('div');
+      c.className = 'stack-card';
+      c.style.setProperty('--riffle-x', (Math.random()*10-5).toFixed(1)+'px');
+      c.style.setProperty('--riffle-r', (Math.random()*8-4).toFixed(1)+'deg');
+      c.style.transform = `translate(${(Math.random()*4-2).toFixed(1)}px, ${(Math.random()*4-2).toFixed(1)}px)`;
+      deck.appendChild(c);
+    }
+    fx.appendChild(deck);
+
+    const shuffleInterval = setInterval(()=>{ SFX.shuffleTick(); }, 86);
+
+    setTimeout(()=>{
+      clearInterval(shuffleInterval);
+      deck.classList.remove('shuffling');
+      dealFlourish(leaderIdx, ()=>{
+        fx.innerHTML = '';
+        if(callback) callback();
+      });
+    }, 765);
+  }
+
+  function dealFlourish(leaderIdx, done){
+    const fx = document.getElementById('dealFx');
+    const flyer = document.createElement('div');
+    flyer.className = 'flying-card';
+    flyer.style.left = '50%';
+    flyer.style.top = '50%';
+    flyer.style.transform = 'translate(-50%,-50%)';
+    fx.appendChild(flyer);
+
+    const order = [];
+    for(let round=0; round<13; round++){
+      for(let s=0; s<4; s++){ order.push((leaderIdx+s)%4); }
+    }
+
+    let i = 0;
+    function step(){
+      if(i >= order.length){
+        flyer.remove();
+        done();
+        return;
       }
-      hz.x = hz.col; hz.y = hz.row;
+      const pIdx = order[i];
+      const pos = seatFxPosition(PLAYERS[pIdx].seat);
+      flyer.style.transition = 'none';
+      flyer.style.left = '50%';
+      flyer.style.top = '50%';
+      flyer.style.transform = 'translate(-50%,-50%) scale(1)';
+      void flyer.offsetWidth; // reflow to restart transition
+      flyer.style.transition = 'left 0.07s ease, top 0.07s ease, transform 0.07s ease';
+      flyer.style.left = pos.left;
+      flyer.style.top = pos.top;
+      flyer.style.transform = 'translate(-50%,-50%) scale(0.7)';
+      SFX.dealTick();
+      i++;
+      // reveal the card in that player's hand right as it "lands"
+      setTimeout(()=>{
+        state.dealProgress[pIdx] = Math.min(13, state.dealProgress[pIdx] + 1);
+        render();
+      }, 67);
+      setTimeout(step, 86);
     }
-  });
-}
+    step();
+  }
 
-function checkWin() {
-  if (gameOver) return;
-  if (level.winType === 'pocket') {
-    const pocket = findChar('K');
-    if (pocket && targetBall) {
-      const pp = toPx(pocket.col + 0.5, pocket.row + 0.5);
-      const dist = Math.hypot(targetBall._px - pp.x, targetBall._py - pp.y);
-      if (dist < cellSize * 0.3) triggerWin();
+  function estimateAIBid(playerIdx){
+    // Hand-strength heuristic — AI doesn't know the tide sequence any more than a
+    // human would at bid time, so this is based purely on raw card strength.
+    const hand = state.hands[playerIdx];
+    let power = 0;
+    for(const c of hand){
+      const v = compareValue(c.rank);
+      if(v===14) power += 0.75;       // Ace
+      else if(v===13) power += 0.55;  // King
+      else if(v===12) power += 0.35;  // Queen
+      else if(v===11) power += 0.18;  // Jack
+      else if(v===10) power += 0.10;
+      else power += 0.03;
     }
-    return;
+    const bySuit = {};
+    for(const c of hand){ bySuit[c.suit] = (bySuit[c.suit]||0) + 1; }
+    for(const s in bySuit){ if(bySuit[s] >= 5) power += (bySuit[s]-4) * 0.3; }
+    let bid = Math.round(power) + Math.round((Math.random()-0.5)*2); // small jitter
+    return clamp(bid, 0, 13);
   }
-  const goal = findChar('G');
-  if (!goal) return;
-  const gp = toPx(goal.col + 0.5, goal.row + 0.5);
-  const dist = Math.hypot(marble.x - gp.x, marble.y - gp.y);
-  if (dist < cellSize * 0.35) {
-    if (level.requireAllPinsDown && !pins.every(p => p.state === 'down')) return;
-    triggerWin();
+
+  function showBidOverlay(callback){
+    let value = 3;
+    document.getElementById('bidHandNumber').textContent = state.round;
+    document.getElementById('bidValue').textContent = value;
+    showOverlay('bidOverlay');
+    document.getElementById('handWrap').classList.add('bidding-peek');
+
+    const minusBtn = document.getElementById('bidMinus');
+    const plusBtn = document.getElementById('bidPlus');
+    const lockBtn = document.getElementById('lockBidBtn');
+
+    function updateVal(delta){
+      value = clamp(value + delta, 0, 13);
+      document.getElementById('bidValue').textContent = value;
+      SFX.click();
+    }
+    minusBtn.onclick = ()=> updateVal(-1);
+    plusBtn.onclick = ()=> updateVal(1);
+    lockBtn.onclick = ()=>{
+      SFX.click();
+      state.bids[0] = value;
+      for(let i=1;i<4;i++){ state.bids[i] = estimateAIBid(i); }
+      document.getElementById('bidOverlay').classList.add('hidden');
+      document.getElementById('handWrap').classList.remove('bidding-peek');
+      showBidSummary(callback);
+    };
   }
-}
 
-function findChar(ch) {
-  for (let r = 0; r < tiles.length; r++)
-    for (let c = 0; c < tiles[r].length; c++)
-      if (tiles[r][c] === ch) return { col:c, row:r };
-  return null;
-}
+  function showBidSummary(callback){
+    document.getElementById('bidSummaryHandNumber').textContent = state.round;
+    const table = document.getElementById('bidSummaryTable');
+    table.innerHTML = '';
+    const order = [0,1,2,3].slice().sort((a,b)=> state.bids[b]-state.bids[a]);
+    order.forEach(i=>{
+      const isYou = i===0;
+      const row = document.createElement('div');
+      row.className = 'results-row';
+      row.innerHTML = `
+        <span class="rank-icon"></span>
+        <span class="player-name${isYou ? ' you' : ''}">${PLAYERS[i].name}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+        <span class="tricks"></span>
+        <span class="points">${state.bids[i]}<span class="delta">tricks bid</span></span>
+      `;
+      table.appendChild(row);
+    });
+    showOverlay('bidSummaryOverlay');
+    const startBtn = document.getElementById('startHandBtn');
+    startBtn.onclick = ()=>{
+      SFX.click();
+      document.getElementById('bidSummaryOverlay').classList.add('hidden');
+      setStatus('Watching the tide...');
+      if(callback) callback();
+    };
+  }
 
-function triggerWin() {
-  gameOver = true;
-  running = false;
-  showResult(true);
-}
-function triggerFail(reason, message) {
-  gameOver = true;
-  running = false;
-  showResult(false, message);
-}
+  function computeBidBonus(){
+    let bestIdx = -1, bestGap = Infinity;
+    for(let i=0;i<4;i++){
+      const bid = state.bids[i];
+      if(bid == null) continue;
+      const actual = state.tricksThisRound[i];
+      const gap = bid - actual;
+      if(gap < 0) continue; // went over their own bid — disqualified
+      if(gap < bestGap || (gap === bestGap && (bestIdx===-1 || bid > state.bids[bestIdx]))){
+        bestGap = gap;
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
+  }
 
-/* =====================================================================
-   RENDERING
-   ===================================================================== */
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0e1013';
-  ctx.fillRect(0, 0, W, H);
+  function revealTideForTrick(callback){
+    state.tideRevealed = false;
+    state.tideRank = null;
+    render();
+    const gauge = document.getElementById('tideRankDisplay');
+    if(gauge) gauge.classList.add('flipping');
+    setTimeout(()=>{
+      state.tideRank = state.tideSequence[state.trickNum-1];
+      state.tideRevealed = true;
+      SFX.tideReveal();
+      render();
+      const g = document.getElementById('tideRankDisplay');
+      if(g) g.classList.remove('flipping');
+      if(callback) callback();
+    }, 850);
+  }
 
-  for (let r = 0; r < tiles.length; r++) {
-    for (let c = 0; c < tiles[r].length; c++) {
-      const ch = tiles[r][c];
-      const p = toPx(c, r);
-      drawTile(ch, p.x, p.y, c, r);
+  function sortCards(a,b){
+    if(a.suit !== b.suit) return SUITS.indexOf(a.suit)-SUITS.indexOf(b.suit);
+    return compareValue(a.rank) - compareValue(b.rank);
+  }
+
+  function compareValue(rank){ return rank===1 ? 14 : rank; } // ace high for normal comparisons
+
+  function legalCards(playerIdx){
+    const hand = state.hands[playerIdx];
+    if(state.ledSuit===null) return hand.slice();
+    const followers = hand.filter(c=>c.suit===state.ledSuit);
+    return followers.length ? followers : hand.slice();
+  }
+
+  function playCard(playerIdx, card){
+    const hand = state.hands[playerIdx];
+    const idx = hand.findIndex(c=>c.rank===card.rank && c.suit===card.suit);
+    if(idx===-1) return;
+    hand.splice(idx,1);
+    state.trick.push({player:playerIdx, card});
+    state.seenCards.push(card);
+    if(state.ledSuit===null) state.ledSuit = card.suit;
+    SFX.cardPlay();
+    render();
+  }
+
+  function isRiptide(card){ return state.tideRevealed && card.rank === state.tideRank; }
+
+  function resolveTrick(){
+    const riptideEntries = state.trick.filter(p=>isRiptide(p.card));
+    let winnerEntry;
+    let wonByRiptide = false;
+    let washedOut = false;
+    if(riptideEntries.length === 1){
+      wonByRiptide = true;
+      winnerEntry = riptideEntries[0];
+    } else {
+      // zero tide cards, or two+ that cancel each other out (washout) — resolve normally
+      washedOut = riptideEntries.length >= 2;
+      const led = state.trick.filter(p=>p.card.suit===state.ledSuit);
+      led.sort((a,b)=> compareValue(b.card.rank)-compareValue(a.card.rank));
+      winnerEntry = led[0];
+    }
+    return { winner:winnerEntry.player, wonByRiptide, washedOut, riptideEntries };
+  }
+
+  function afterTrickComplete(){
+    state.locked = true;
+    const { winner, wonByRiptide, washedOut, riptideEntries } = resolveTrick();
+    highlightWinningCard(winner, wonByRiptide);
+    if(washedOut) highlightWashout(riptideEntries);
+    const pts = wonByRiptide ? 2 : 1;
+    state.scores[winner] += pts;
+    state.tricksThisRound[winner] += 1;
+    state.pointsThisRound[winner] += pts;
+    spawnScorePopup(winner, pts, wonByRiptide);
+    announceTrickWinner(winner, wonByRiptide, washedOut, pts);
+    if(washedOut){
+      SFX.washout();
+      setStatus(`🌊 Tide washed out — cards cancel! ${nameFor(winner)} ${verbFor(winner,'takes')} it on a normal trick (+1).`);
+    } else if(wonByRiptide){
+      SFX.riptideWin();
+      setStatus(`${nameFor(winner)} ${verbFor(winner,'takes')} the trick with the tide card! +2`);
+    } else {
+      SFX.trickWin();
+      setStatus(`${nameFor(winner)} ${verbFor(winner,'takes')} the trick (+1).`);
+    }
+
+    setTimeout(()=>{
+      collectTrick();
+      setTimeout(()=>{
+        state.trick = [];
+        state.ledSuit = null;
+        state.leader = winner;
+        state.currentPlayer = winner;
+        state.trickNum += 1;
+        state.locked = false;
+
+        if(state.hands.every(h=>h.length===0)){
+          setStatus(`Hand complete! ${nameFor(winner)} ${verbFor(winner,'takes')} the final trick.`);
+          setTimeout(()=>{ endRound(); }, 700);
+        } else {
+          setStatus(`Watching the tide for trick ${state.trickNum}...`);
+          revealTideForTrick(()=>{
+            setStatus(`${nameFor(winner)} ${verbFor(winner,'leads')} trick ${state.trickNum}.`);
+            maybeAdvanceAI();
+          });
+        }
+      }, 650);
+    }, 2500);
+  }
+
+  function highlightWinningCard(winner, wonByRiptide){
+    if(!wonByRiptide) return;
+    const el = document.querySelector(`.played.${PLAYERS[winner].seat}`);
+    if(el) el.classList.add('riptide-win');
+  }
+
+  function spawnScorePopup(winner, pts, wonByRiptide){
+    const el = document.querySelector(`.played.${PLAYERS[winner].seat}`);
+    if(!el) return;
+    const popup = document.createElement('div');
+    popup.className = 'score-popup' + (wonByRiptide ? ' riptide' : '');
+    popup.textContent = '+'+pts;
+    el.appendChild(popup);
+    setTimeout(()=>{ popup.remove(); }, 1350);
+  }
+
+  function highlightWashout(riptideEntries){
+    for(const entry of riptideEntries){
+      const el = document.querySelector(`.played.${PLAYERS[entry.player].seat}`);
+      if(el) el.classList.add('washed-out');
     }
   }
 
-  // pins
-  pins.forEach(p => {
-    if (p.state === 'down') return;
-    const px = toPx(p.col + 0.5, p.row + 0.5);
-    ctx.beginPath();
-    ctx.arc(px.x, px.y, cellSize * 0.24, 0, Math.PI*2);
-    const grad = ctx.createRadialGradient(px.x-4, px.y-6, 2, px.x, px.y, cellSize*0.24);
-    grad.addColorStop(0, '#ffe9b0'); grad.addColorStop(1, '#c98f2e');
-    ctx.fillStyle = grad;
-    ctx.fill();
-  });
+  function announceTrickWinner(winner, wonByRiptide, washedOut, pts){
+    const winningSeat = PLAYERS[winner].seat;
+    document.querySelectorAll('.played').forEach(el=>{
+      if(!el.classList.contains(winningSeat)) el.classList.add('dim');
+    });
 
-  // heavy blocks + target ball
-  heavyBlocks.forEach(b => drawBlock(b, '#8d97a3'));
-  if (targetBall) drawBlock(targetBall, '#d8895e');
+    const pill = document.getElementById('scorepill-'+winner);
+    if(pill){
+      pill.classList.remove('flash');
+      void pill.offsetWidth; // restart animation if it's already mid-flash
+      pill.classList.add('flash');
+      setTimeout(()=>{ pill.classList.remove('flash'); }, 2000);
+    }
 
-  // hazards
-  hazards.forEach(hz => {
-    let px;
-    if (hz.type === 'turret') px = toPx(hz.col + 0.5, hz.row + 0.5);
-    else px = toPx(hz.x + (hz.type==='patrol'&&hz.axis==='x'?0:0.5), hz.y + (hz.type==='patrol'&&hz.axis==='y'?0:0.5));
-    const size = (hz.size || 0.35) * cellSize;
-    ctx.beginPath();
-    ctx.arc(px.x, px.y, size, 0, Math.PI*2);
-    ctx.fillStyle = hz.type === 'hunter' ? '#d84a4a' : (hz.type === 'turret' ? '#8a6bd8' : '#d86a5e');
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
-  });
+    const zone = document.getElementById('trickZone');
+    if(!zone) return;
+    const banner = document.createElement('div');
+    banner.className = 'winner-banner' + (wonByRiptide ? ' riptide' : '') + (washedOut ? ' washed' : '');
+    const name = nameFor(winner);
+    const verb = verbFor(winner,'wins');
+    let label = washedOut
+      ? `🌊 Washout — ${name} ${verb} the trick`
+      : wonByRiptide
+        ? `🎯 Tide card! ${name} ${verb} the trick`
+        : `${name} ${verb} the trick`;
+    banner.textContent = `${label} +${pts}`;
+    zone.appendChild(banner);
+    setTimeout(()=>{ banner.remove(); }, 2500);
+  }
 
-  // projectiles
-  projectiles.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, (p.size||0.25)*cellSize, 0, Math.PI*2);
-    ctx.fillStyle = '#8a6bd8';
-    ctx.fill();
-  });
+  function collectTrick(){
+    for(const p of PLAYERS){
+      const el = document.querySelector(`.played.${p.seat}`);
+      if(el) el.classList.add('collecting');
+    }
+  }
 
-  // marble
-  drawMarble();
-}
+  function showOverlay(id){
+    const overlay = document.getElementById(id);
+    overlay.classList.remove('hidden');
+    const modal = overlay.querySelector('.modal');
+    modal.classList.remove('anim-in');
+    void modal.offsetWidth;
+    modal.classList.add('anim-in');
+  }
 
-function drawTile(ch, x, y, c, r) {
-  const s = cellSize;
-  if (ch === '#') {
-    ctx.fillStyle = '#2a2f38';
-    ctx.fillRect(x, y, s, s);
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.strokeRect(x+0.5, y+0.5, s-1, s-1);
-    return;
+  function buildResultsRows(container, opts){
+    container.innerHTML = '';
+    const order = [0,1,2,3].slice().sort((a,b)=> state.scores[b]-state.scores[a]);
+    order.forEach(i=>{
+      const isYou = i===0;
+      const isHandWinner = opts.highlight === i;
+      const isBidWinner = opts.bidBonusIdx === i;
+      const row = document.createElement('div');
+      row.className = 'results-row' + ((isHandWinner || isBidWinner) ? ' winner' : '');
+      let icons = '';
+      if(isHandWinner) icons += '🏆';
+      if(isBidWinner) icons += (icons ? ' ' : '') + '🎯';
+      const bidTag = (opts.showTricks && state.bids[i]!=null) ? `<span class="bid-tag">bid ${state.bids[i]}</span>` : '';
+      const tricksHtml = opts.showTricks
+        ? `<span class="tricks">${state.tricksThisRound[i]} trick${state.tricksThisRound[i]===1?'':'s'} ${bidTag}</span>`
+        : `<span class="tricks"></span>`;
+      const pointsHtml = opts.showTricks
+        ? `+${state.pointsThisRound[i]}<span class="delta">${state.scores[i]} pts total</span>`
+        : `${state.scores[i]} pts`;
+      row.innerHTML = `
+        <span class="rank-icon">${icons}</span>
+        <span class="player-name${isYou ? ' you' : ''}">${PLAYERS[i].name}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+        ${tricksHtml}
+        <span class="points">${pointsHtml}</span>
+      `;
+      container.appendChild(row);
+    });
   }
-  if (ch === ' ') { return; } // void — background shows through
-  if (ch === 'G') {
-    ctx.fillStyle = '#1a2a24';
-    ctx.fillRect(x, y, s, s);
-    ctx.beginPath();
-    ctx.arc(x+s/2, y+s/2, s*0.32, 0, Math.PI*2);
-    ctx.strokeStyle = '#7ed6a5'; ctx.lineWidth = 3; ctx.stroke();
-    return;
+
+  function buildProgressBars(container){
+    container.innerHTML = `<div class="modal-eyebrow">Race to ${TARGET_SCORE}</div>`;
+    const order = [0,1,2,3].slice().sort((a,b)=> state.scores[b]-state.scores[a]);
+    order.forEach(i=>{
+      const p = PLAYERS[i];
+      const pct = Math.min(100, (state.scores[i]/TARGET_SCORE)*100);
+      const row = document.createElement('div');
+      row.className = 'score-progress-row';
+      row.innerHTML = `
+        <span class="label">${p.name}</span>
+        <span class="score-progress-bar"><span class="score-progress-fill" style="width:${pct}%"></span></span>
+        <span class="val">${state.scores[i]}</span>
+      `;
+      container.appendChild(row);
+    });
   }
-  if (ch === 'K') {
-    ctx.fillStyle = '#0e1013';
-    ctx.beginPath(); ctx.arc(x+s/2, y+s/2, s*0.36, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.stroke();
-    return;
-  }
-  if (ch === 'I') { ctx.fillStyle = '#204048'; ctx.fillRect(x,y,s,s); ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(x,y,s,s); return; }
-  if (ch === 'C') { ctx.fillStyle = '#3a3226'; ctx.fillRect(x,y,s,s); return; }
-  if (ch === 'B') {
-    const hp = breakableHp[keyOf(c,r)] || 0;
-    ctx.fillStyle = hp >= 2 ? '#7d5b8a' : '#4a3a52';
-    ctx.fillRect(x,y,s,s);
-    return;
-  }
-  const door = level.doors && level.doors.find(d => d.col === c && d.row === r);
-  if (door) { ctx.fillStyle = doorOpenState[door.id] ? '#1a2a24' : '#5a3a3a'; ctx.fillRect(x,y,s,s); return; }
-  if (level.plate && level.plate.col === c && level.plate.row === r) {
-    ctx.fillStyle = plateWeighted ? '#3a5a48' : '#33373f'; ctx.fillRect(x,y,s,s); return;
-  }
-  if (level.switches && level.switches.some(sw => sw.col === c && sw.row === r)) {
-    const sw = level.switches.find(sw => sw.col === c && sw.row === r);
-    ctx.fillStyle = switchActive[sw.id] ? '#3a5a48' : '#33373f';
-    ctx.fillRect(x,y,s,s);
-    ctx.fillStyle = 'rgba(230,235,240,0.7)';
-    ctx.font = (s*0.35)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(sw.id, x+s/2, y+s/2);
-    return;
-  }
-  if (ch === '>' || ch === '<') {
-    ctx.fillStyle = '#1c2a33'; ctx.fillRect(x,y,s,s);
-    ctx.fillStyle = 'rgba(94,200,216,0.6)';
-    ctx.font = (s*0.5)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(ch, x+s/2, y+s/2);
-    return;
-  }
-  if (level.timedDoors) {
-    const idx = level.timedDoors.findIndex(td => td.col === c && td.row === r);
-    if (idx >= 0) {
-      const open = timedDoorsState[idx] && timedDoorsState[idx].open;
-      ctx.fillStyle = open ? '#1a2a24' : '#5a3a3a';
-      ctx.fillRect(x,y,s,s);
+
+  function endRound(){
+    render();
+    const bidBonusIdx = computeBidBonus();
+    if(bidBonusIdx !== -1){
+      state.scores[bidBonusIdx] += BID_BONUS;
+      state.pointsThisRound[bidBonusIdx] += BID_BONUS;
+    }
+    state.lastBidBonusIdx = bidBonusIdx;
+
+    const winnerIdx = state.scores.indexOf(Math.max(...state.scores));
+    if(Math.max(...state.scores) >= TARGET_SCORE){
+      showGameOver(winnerIdx);
       return;
     }
+    SFX.roundEnd();
+    if(bidBonusIdx !== -1) SFX.bidBonus();
+    const handWinnerIdx = state.tricksThisRound.indexOf(Math.max(...state.tricksThisRound));
+    state.lastHandWinner = handWinnerIdx;
+    document.getElementById('roundNumber').textContent = state.round;
+    document.getElementById('roundTitle').textContent = handWinnerIdx===0
+      ? 'You take the hand'
+      : `${PLAYERS[handWinnerIdx].name} takes the hand`;
+    let subtitle = handWinnerIdx===0
+      ? 'You lead the next hand.'
+      : `${PLAYERS[handWinnerIdx].name} leads the next hand.`;
+    if(bidBonusIdx !== -1){
+      const gap = state.bids[bidBonusIdx] - state.tricksThisRound[bidBonusIdx];
+      const bidderName = bidBonusIdx===0 ? 'You' : PLAYERS[bidBonusIdx].name;
+      const called = gap===0 ? 'called it exactly' : `landed within ${gap} of the bid`;
+      const verb = bidBonusIdx===0 ? 'earn' : 'earns';
+      subtitle += ` 🎯 ${bidderName} ${called} and ${verb} a +${BID_BONUS} bonus.`;
+    }
+    document.getElementById('roundSubtitle').textContent = subtitle;
+    buildResultsRows(document.getElementById('resultsTable'), { highlight: handWinnerIdx, showTricks: true, bidBonusIdx });
+    buildProgressBars(document.getElementById('progressTrack'));
+    showOverlay('roundOverlay');
   }
-  // default floor
-  ctx.fillStyle = ((c+r) % 2 === 0) ? '#1c2028' : '#191d24';
-  ctx.fillRect(x, y, s, s);
-}
 
-function drawBlock(b, color) {
-  const x = b._px !== undefined ? b._px : toPx(b.col+0.5, b.row+0.5).x;
-  const y = b._py !== undefined ? b._py : toPx(b.col+0.5, b.row+0.5).y;
-  const r = cellSize * 0.3;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI*2);
-  const grad = ctx.createRadialGradient(x-4,y-6,2,x,y,r);
-  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.4, color); grad.addColorStop(1, '#1c2026');
-  ctx.fillStyle = grad;
-  ctx.fill();
-}
-
-function drawMarble() {
-  const r = marble.r;
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(marble.x, marble.y + r*0.55, r*0.95, r*0.4, 0, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.fill();
-  ctx.restore();
-
-  const grad = ctx.createRadialGradient(
-    marble.x - r*0.35, marble.y - r*0.4, r*0.1, marble.x, marble.y, r
-  );
-  grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(0.18, '#e8edf1');
-  grad.addColorStop(0.4, '#aab4bf');
-  grad.addColorStop(0.7, '#5b6570');
-  grad.addColorStop(1, '#1c2026');
-
-  ctx.beginPath();
-  ctx.arc(marble.x, marble.y, r, 0, Math.PI*2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(94, 200, 216, 0.25)'; ctx.lineWidth = 1; ctx.stroke();
-}
-
-/* =====================================================================
-   HUD
-   ===================================================================== */
-function updateHud() {
-  hudLevelName.textContent = level.name;
-  hudTimerBlock.style.display = level.flood ? 'block' : 'none';
-  hudObjectiveBlock.style.display = level.requireAllPinsDown || level.sequenceMode || level.winType === 'pocket' ? 'block' : 'none';
-  if (level.requireAllPinsDown) hudObjective.textContent = 'Knock down all pins';
-  else if (level.sequenceMode) hudObjective.textContent = 'Hit switches in order';
-  else if (level.winType === 'pocket') hudObjective.textContent = 'Push ball into pocket';
-}
-
-function tickHud() {
-  if (level.flood) {
-    const remaining = Math.max(0, level.flood.rows.length * level.flood.interval - (floodIndex * level.flood.interval + floodElapsed));
-    hudTimer.textContent = remaining.toFixed(1) + 's';
-    hudTimer.classList.toggle('warnColor', remaining < 5);
+  function showGameOver(winnerIdx){
+    document.getElementById('gameOverTitle').textContent = winnerIdx===0 ? 'You win the game!' : `${PLAYERS[winnerIdx].name} wins the game`;
+    const bidBonusIdx = state.lastBidBonusIdx;
+    if(bidBonusIdx !== -1){
+      const bidderName = bidBonusIdx===0 ? 'You' : PLAYERS[bidBonusIdx].name;
+      const verb = bidBonusIdx===0 ? 'earned' : 'earned';
+      document.getElementById('gameOverSubtitle').textContent = `🎯 ${bidderName} nailed the final bid and ${verb} a +${BID_BONUS} bonus on that hand.`;
+    } else {
+      document.getElementById('gameOverSubtitle').textContent = '';
+    }
+    buildResultsRows(document.getElementById('gameOverResultsTable'), { highlight: winnerIdx, showTricks: false });
+    showOverlay('gameOverOverlay');
+    if(winnerIdx===0){
+      SFX.gameWin();
+      launchConfetti();
+    } else {
+      SFX.gameLose();
+    }
   }
-}
 
-/* =====================================================================
-   GAME LOOP
-   ===================================================================== */
-function loop(t) {
-  if (!running) return;
-  if (lastTime === null) lastTime = t;
-  let dt = Math.min((t - lastTime) / 1000, 0.05);
-  lastTime = t;
-  step(dt);
-  tickHud();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-function startLoop() {
-  running = true;
-  lastTime = null;
-  requestAnimationFrame(loop);
-}
-
-/* =====================================================================
-   FLOW: menu -> level select -> game -> result
-   ===================================================================== */
-let sensorsReady = false;
-let pendingLevelId = null;
-
-function startLevel(id) {
-  const lvl = LEVELS.find(l => l.id === id);
-  if (!lvl) return;
-  pendingLevelId = id;
-  if (!sensorsReady) {
-    permOverlay.classList.remove('hidden');
-    return;
+  function launchConfetti(){
+    const colors = ['#FF6A4D','#E7C873','#DCEEEA','#8FB9BE','#F2E9D8'];
+    for(let i=0;i<44;i++){
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random()*100+'vw';
+      piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+      piece.style.animationDuration = (2.2+Math.random()*1.4)+'s';
+      piece.style.animationDelay = (Math.random()*0.4)+'s';
+      piece.style.borderRadius = Math.random()<0.5 ? '50%' : '2px';
+      document.body.appendChild(piece);
+      setTimeout(()=>piece.remove(), 4200);
+    }
   }
-  resize();
-  showScreen('game');
-  loadLevel(lvl);
-  resultOverlay.classList.add('hidden');
-  startLoop();
-}
 
-startBtn.addEventListener('click', async () => {
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    try {
-      const result = await DeviceOrientationEvent.requestPermission();
-      if (result === 'granted') {
-        window.addEventListener('deviceorientation', handleOrientation, true);
-        sensorsReady = true;
-        permOverlay.classList.add('hidden');
-        if (pendingLevelId) startLevel(pendingLevelId);
-      } else {
-        permStatus.textContent = 'Motion access denied. Enable it in Settings → Safari → Motion & Orientation Access, then reload.';
+  // ---------------- AI ----------------
+  function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function copiesPlayedOfRank(rank){
+    return state.seenCards.filter(c=>c.rank===rank).length;
+  }
+
+  // Is this the highest remaining copy of its suit — i.e. every higher card of
+  // that suit has already been played? If so it's a "safe" lead: nothing can
+  // beat it on a normal (non-tide) resolution.
+  function isTopRemainingOfSuit(card){
+    const val = compareValue(card.rank);
+    for(let rank=1; rank<=13; rank++){
+      if(rank===card.rank) continue;
+      if(compareValue(rank) > val){
+        const alreadyPlayed = state.seenCards.some(c=>c.suit===card.suit && c.rank===rank);
+        if(!alreadyPlayed) return false;
       }
-    } catch (err) {
-      permStatus.textContent = 'Could not request motion permission: ' + err.message;
     }
-  } else if (window.DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', handleOrientation, true);
-    sensorsReady = true;
-    permOverlay.classList.add('hidden');
-    if (!window.isSecureContext) {
-      permStatus.textContent = '⚠️ Not on HTTPS/localhost — sensors may not fire. Host this over HTTPS.';
+    return true;
+  }
+
+  function aggressionFor(playerIdx){
+    const top = Math.max(...state.scores);
+    const gap = top - state.scores[playerIdx];
+    // behind in score -> play harder for tricks; comfortably ahead -> play a bit safer
+    return clamp(0.55 + gap*0.06, 0.45, 0.9);
+  }
+
+  function chooseLead(playerIdx, legal){
+    const bySuit = {};
+    for(const c of legal){ (bySuit[c.suit] = bySuit[c.suit] || []).push(c); }
+    // prefer a suit where we hold a guaranteed-safe top card, if one exists
+    for(const s in bySuit){
+      const top = bySuit[s].slice().sort((a,b)=>compareValue(b.rank)-compareValue(a.rank))[0];
+      if(isTopRemainingOfSuit(top) && Math.random() < 0.75) return top;
     }
-    if (pendingLevelId) startLevel(pendingLevelId);
-  } else {
-    permStatus.textContent = 'This device/browser does not support motion tilt input.';
+    // else lead from our longest suit, a middling card, to fish out high cards
+    // while keeping our own top card in that suit back for later
+    let longestSuit=null, longestLen=0;
+    for(const s in bySuit){ if(bySuit[s].length > longestLen){ longestLen = bySuit[s].length; longestSuit = s; } }
+    const suitCards = bySuit[longestSuit].sort((a,b)=>compareValue(a.rank)-compareValue(b.rank));
+    if(suitCards.length >= 3) return suitCards[Math.floor(suitCards.length/2)];
+    // else lead low from our shortest suit to void it early
+    let shortestSuit=null, shortestLen=99;
+    for(const s in bySuit){ if(bySuit[s].length < shortestLen){ shortestLen = bySuit[s].length; shortestSuit = s; } }
+    return bySuit[shortestSuit].sort((a,b)=>compareValue(a.rank)-compareValue(b.rank))[0];
   }
-});
 
-document.getElementById('exitBtn').addEventListener('click', () => {
-  running = false;
-  showScreen('levelSelect');
-});
-
-function showResult(won, message) {
-  resultOverlay.classList.remove('hidden');
-  if (won) {
-    resultIcon.textContent = '🏁';
-    resultTitle.textContent = 'Level Complete';
-    resultMessage.textContent = 'Nicely rolled.';
-    const cat = level.category, tier = level.tier;
-    const next = LEVELS.find(l => l.category === cat && l.tier === tier + 1);
-    resultNext.style.display = next ? 'inline-block' : 'none';
-    resultNext.onclick = () => { resultOverlay.classList.add('hidden'); startLevel(next.id); };
-  } else {
-    resultIcon.textContent = '💥';
-    resultTitle.textContent = 'Try Again';
-    resultMessage.textContent = message || 'That didn\'t go as planned.';
-    resultNext.style.display = 'none';
+  function chooseDiscard(legal){
+    const bySuit = {};
+    for(const c of legal){ (bySuit[c.suit] = bySuit[c.suit] || []).push(c); }
+    let minSuit=null, minLen=99;
+    for(const s in bySuit){ if(bySuit[s].length < minLen){ minLen = bySuit[s].length; minSuit = s; } }
+    return bySuit[minSuit].sort((a,b)=>compareValue(a.rank)-compareValue(b.rank))[0];
   }
-}
 
-resultRetry.addEventListener('click', () => {
-  resultOverlay.classList.add('hidden');
-  startLevel(level.id);
-});
-resultMenu.addEventListener('click', () => {
-  running = false;
-  resultOverlay.classList.add('hidden');
-  showScreen('levelSelect');
-});
+  function aiChooseCard(playerIdx){
+    const legal = legalCards(playerIdx);
+    const tideCard = legal.find(c=>isRiptide(c));
+    const aggression = aggressionFor(playerIdx);
 
+    if(tideCard){
+      const tideAlreadyInTrick = state.trick.some(p=>isRiptide(p.card));
+      if(tideAlreadyInTrick){
+        // Someone's about to win with the tide card — playing our own cancels it
+        // (washout) and reverts to a normal trick. Worth it to deny a threat.
+        const leaderPlayer = state.trick.find(p=>isRiptide(p.card)).player;
+        const leaderIsThreat = state.scores[leaderPlayer] >= Math.max(...state.scores) - 2;
+        const chance = clamp((leaderIsThreat ? 0.75 : 0.45) + (aggression-0.6)*0.4, 0.25, 0.95);
+        if(Math.random() < chance) return tideCard;
+      } else {
+        // No tide card played yet this trick. Count how many copies of this rank
+        // are still unaccounted for (not in our hand, not already played) — those
+        // are the only cards that could wash us out, and only if held by a player
+        // who hasn't acted yet this trick.
+        const remainingUnseen = 4 - copiesPlayedOfRank(state.tideRank) - 1; // minus our own copy
+        const playersRemainingAfterMe = 3 - state.trick.length;
+        const riskScore = clamp((remainingUnseen * playersRemainingAfterMe) / 9, 0, 0.7);
+        const chance = clamp((1 - riskScore) + (aggression-0.6)*0.3, 0.35, 0.97);
+        if(Math.random() < chance) return tideCard;
+      }
+    }
+
+    if(state.trick.length===0){
+      return chooseLead(playerIdx, legal);
+    } else {
+      const led = state.ledSuit;
+      const canFollow = legal.some(c=>c.suit===led);
+      if(canFollow){
+        const followers = legal.filter(c=>c.suit===led).sort((a,b)=>compareValue(a.rank)-compareValue(b.rank));
+        const bestOnTable = Math.max(...state.trick.filter(p=>p.card.suit===led).map(p=>compareValue(p.card.rank)));
+        const winners = followers.filter(c=>compareValue(c.rank) > bestOnTable);
+        // this is likely the last-to-act player if trick is full after this play — grab it more readily
+        const isLastToAct = state.trick.length===3;
+        const winChance = isLastToAct ? Math.max(aggression, 0.85) : aggression;
+        if(winners.length && Math.random() < winChance) return winners[0];
+        return followers[0];
+      } else {
+        return chooseDiscard(legal);
+      }
+    }
+  }
+
+  function maybeAdvanceAI(){
+    if(state.locked || !state.tideRevealed) return;
+    if(state.trick.length===4){ afterTrickComplete(); return; }
+    const p = state.currentPlayer;
+    if(PLAYERS[p].isHuman){
+      state.cachedSuggestion = aiChooseCard(0);
+      render();
+      return;
+    }
+    state.locked = true;
+    setTimeout(()=>{
+      const card = aiChooseCard(p);
+      playCard(p, card);
+      advanceTurn();
+      state.locked = false;
+      if(state.trick.length===4){ afterTrickComplete(); }
+      else { maybeAdvanceAI(); }
+    }, 550 + Math.random()*350);
+  }
+
+  function advanceTurn(){
+    state.currentPlayer = (state.currentPlayer+1) % 4;
+  }
+
+  function humanPlay(card){
+    if(state.locked || !state.tideRevealed) return;
+    if(state.currentPlayer !== 0) return;
+    const legal = legalCards(0);
+    if(!legal.some(c=>c.rank===card.rank && c.suit===card.suit)) return;
+    playCard(0, card);
+    advanceTurn();
+    if(state.trick.length===4){ afterTrickComplete(); }
+    else { maybeAdvanceAI(); }
+  }
+
+  // ---------------- Rendering ----------------
+  function setStatus(msg){
+    document.getElementById('statusBar').innerHTML = msg;
+  }
+
+  function cardEl(card, small){
+    const red = card.suit==='H' || card.suit==='D';
+    const div = document.createElement('div');
+    div.className = 'card' + (red ? ' red' : '') + (isRiptide(card) ? ' tide-hot' : '');
+    div.innerHTML = `
+      <div class="corner top">${RANK_LABEL[card.rank]}<br>${SUIT_SYMBOL[card.suit]}</div>
+      <div class="pip">${SUIT_SYMBOL[card.suit]}</div>
+      <div class="corner bottom">${RANK_LABEL[card.rank]}<br>${SUIT_SYMBOL[card.suit]}</div>
+    `;
+    return div;
+  }
+
+  function render(){
+    // scoreboard
+    const sb = document.getElementById('scoreboard');
+    sb.innerHTML = '';
+    PLAYERS.forEach((p,i)=>{
+      const pill = document.createElement('div');
+      pill.id = 'scorepill-'+i;
+      pill.className = 'score-pill' + (i===0 ? ' you' : '');
+      pill.innerHTML = `<span class="pill-name">${p.name}</span><span class="score-num">${state.scores[i]}</span>`;
+      sb.appendChild(pill);
+    });
+
+    renderBidTracker();
+
+    // tide gauge
+    document.getElementById('tideRankDisplay').textContent = state.tideRevealed ? RANK_LABEL[state.tideRank] : '?';
+    document.getElementById('tideNote').textContent = state.tideRevealed
+      ? `Any ${RANK_LABEL[state.tideRank]} played this trick wins it outright.`
+      : `Revealed the moment this trick begins.`;
+
+    // opponent card backs
+    ['west','north','east'].forEach((seat,i)=>{
+      const pIdx = PLAYERS.findIndex(p=>p.seat===seat);
+      const container = document.getElementById('cards-'+seat);
+      container.innerHTML = '';
+      const n = state.revealHands ? Math.min(state.hands[pIdx].length, 13) : state.dealProgress[pIdx];
+      for(let k=0;k<n;k++){
+        const cb = document.createElement('div');
+        const isNewest = !state.revealHands && k === n-1;
+        cb.className = 'cardback' + ((state.justRevealed || isNewest) ? ' deal-in' : '');
+        if(state.justRevealed) cb.style.animationDelay = (k*35)+'ms';
+        container.appendChild(cb);
+      }
+      document.getElementById('seat-'+seat).classList.toggle('turn', state.revealHands && state.currentPlayer===pIdx && !isOverlayOpen());
+    });
+
+    // trick zone
+    const tz = document.getElementById('trickZone');
+    tz.innerHTML = '';
+    state.trick.forEach((entry, idx)=>{
+      const seat = PLAYERS[entry.player].seat;
+      const wrap = document.createElement('div');
+      wrap.className = 'played ' + seat + (idx===0 ? ' led' : '');
+      wrap.appendChild(cardEl(entry.card));
+      tz.appendChild(wrap);
+      if(idx === state.trick.length-1){
+        wrap.classList.add('entering');
+        void wrap.offsetWidth; // force reflow so the transition catches the change
+        requestAnimationFrame(()=>{ wrap.classList.remove('entering'); });
+      }
+    });
+
+    // footer trick counter
+    document.querySelector('footer').firstChild.textContent = `Trick ${Math.min(state.trickNum,13)} / 13`;
+
+    // hand
+    const handEl = document.getElementById('hand');
+    handEl.innerHTML = '';
+    const dealtCount = state.revealHands ? state.hands[0].length : state.dealProgress[0];
+    const visibleHand = state.hands[0].slice(0, dealtCount);
+    const legal = state.currentPlayer===0 ? legalCards(0) : [];
+    const isYourTurn = state.currentPlayer===0 && !state.locked && state.tideRevealed && state.trick.length<4;
+    const suggestion = isYourTurn ? state.cachedSuggestion : null;
+
+    function buildCardSlot(card, idx){
+      const slot = document.createElement('div');
+      const playable = isYourTurn && legal.some(c=>c.rank===card.rank && c.suit===card.suit);
+      const showDisabled = state.tideRevealed && !playable; // only dim during actual trick play
+      const isRecommended = !!suggestion && card.rank===suggestion.rank && card.suit===suggestion.suit;
+      const isNewestDeal = !state.revealHands && idx === visibleHand.length-1;
+      slot.className = 'card-slot'
+        + (showDisabled ? ' disabled' : '')
+        + ((state.justRevealed || isNewestDeal) ? ' deal-in' : '')
+        + (isRecommended ? ' recommended' : '');
+      if(state.justRevealed) slot.style.animationDelay = (idx*35)+'ms';
+      slot.appendChild(cardEl(card));
+      slot.addEventListener('click', ()=>{ if(playable) humanPlay(card); });
+      return slot;
+    }
+
+    const useTwoRows = visibleHand.length > 7;
+    handEl.classList.toggle('two-row', useTwoRows);
+    if(useTwoRows){
+      const mid = Math.ceil(visibleHand.length/2);
+      const topRow = document.createElement('div');
+      topRow.className = 'hand-row';
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'hand-row';
+      visibleHand.forEach((card, idx)=>{
+        const slot = buildCardSlot(card, idx);
+        (idx < mid ? topRow : bottomRow).appendChild(slot);
+      });
+      handEl.appendChild(topRow);
+      handEl.appendChild(bottomRow);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'hand-row';
+      visibleHand.forEach((card, idx)=>{
+        row.appendChild(buildCardSlot(card, idx));
+      });
+      handEl.appendChild(row);
+    }
+  }
+
+  function renderBidTracker(){
+    const tracker = document.getElementById('bidTracker');
+    if(!tracker) return;
+    tracker.innerHTML = '';
+    if(state.bids[0] == null || !state.revealHands){ return; }
+    PLAYERS.forEach((p,i)=>{
+      const bid = state.bids[i];
+      if(bid == null) return;
+      const won = state.tricksThisRound[i];
+      const over = won > bid;
+      const chip = document.createElement('div');
+      chip.className = 'bid-chip' + (i===0 ? ' you' : '') + (over ? ' over' : '');
+      chip.innerHTML = `${i===0 ? 'You' : p.name} <span class="progress-num">${won}/${bid}</span>`;
+      tracker.appendChild(chip);
+    });
+  }
+
+  function isOverlayOpen(){
+    return !document.getElementById('roundOverlay').classList.contains('hidden') ||
+           !document.getElementById('gameOverOverlay').classList.contains('hidden') ||
+           !document.getElementById('overlay').classList.contains('hidden');
+  }
+
+  // ---------------- Wire up ----------------
+  document.getElementById('muteBtn').addEventListener('click', ()=>{
+    const next = !SFX.isMuted();
+    SFX.setMuted(next);
+    document.getElementById('muteBtn').textContent = next ? '🔇' : '🔊';
+  });
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    SFX.unlock();
+    SFX.startAmbience();
+    SFX.click();
+    document.getElementById('overlay').classList.add('hidden');
+    assignAINames();
+    state = newGameState();
+    startRound();
+  });
+
+  document.getElementById('nextRoundBtn').addEventListener('click', ()=>{
+    SFX.click();
+    document.getElementById('roundOverlay').classList.add('hidden');
+    startRound();
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    SFX.click();
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    assignAINames();
+    state = newGameState();
+    startRound();
+  });
+
+  // initial idle render behind the welcome modal
+  assignAINames();
+  state = newGameState();
+  render();
 })();
 </script>
 </body>
